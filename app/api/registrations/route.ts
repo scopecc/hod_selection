@@ -1,0 +1,36 @@
+import { NextResponse } from 'next/server';
+import { getDatabase } from '@/lib/mongodb';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+export async function GET(req: Request) {
+	const session = await getServerSession(authOptions);
+	if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+	const { searchParams } = new URL(req.url);
+	const draftId = searchParams.get('draftId');
+	if (!draftId) return NextResponse.json({ error: 'draftId required' }, { status: 400 });
+	const db = await getDatabase();
+	const reg = await db.collection('registrations').findOne({ draftId, userId: session.user.id });
+	return NextResponse.json({ registration: reg || null });
+}
+
+export async function POST(req: Request) {
+	const session = await getServerSession(authOptions);
+	if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+	const body = await req.json();
+	const { draftId, batch, entries, status } = body || {};
+	if (!draftId || !batch || !Array.isArray(entries)) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+	const db = await getDatabase();
+	const userId = session.user.id as string;
+	const userName = session.user.name || '';
+	const department = (session.user as any).department || '';
+	const now = new Date();
+	await db.collection('registrations').updateOne(
+		{ draftId, userId },
+		{ $set: { draftId, userId, userName, department, batch, entries, status: status || 'draft', updatedAt: now, createdAt: now } },
+		{ upsert: true }
+	);
+	return NextResponse.json({ success: true });
+}
+
+
