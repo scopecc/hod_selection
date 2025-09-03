@@ -44,7 +44,7 @@ export default function RegistrationPage() {
 
 	const selectedYearRange = useMemo(() => {
 		const d = draftsData?.drafts?.find((d: any) => d._id === selectedDraft);
-		return d ? `${d.yearStart}-${d.yearEnd}` : '';
+		return d ? `${new Date(d.yearStart).getFullYear()}-${new Date(d.yearEnd).getFullYear()}` : '';
 	}, [selectedDraft, draftsData]);
 
 	return (
@@ -54,11 +54,11 @@ export default function RegistrationPage() {
 				<CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
 					<select className="border rounded p-2" value={selectedDraft} onChange={e => { setSelectedDraft(e.target.value); setBatch(''); }}>
 						<option value="">Select Draft</option>
-						{draftsData?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({d.yearStart}-{d.yearEnd})</option>)}
+						{draftsData?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()})</option>)}
 					</select>
 					<select className="border rounded p-2" value={batch} onChange={e => setBatch(e.target.value)} disabled={!selectedDraft}>
 						<option value="">Select Batch</option>
-						{selectedDraft && (() => { const d = draftsData?.drafts?.find((x: any) => x._id === selectedDraft); if (!d) return null; const range: string[] = [`${d.yearStart}-${d.yearEnd}`]; return range.map(r => <option key={r} value={r}>{r}</option>); })()}
+						{selectedDraft && (() => { const d = draftsData?.drafts?.find((x: any) => x._id === selectedDraft); if (!d) return null; const range: string[] = [`${new Date(d.yearStart).getFullYear()}-${new Date(d.yearEnd).getFullYear()}`]; return range.map(r => <option key={r} value={r}>{r}</option>); })()}
 					</select>
 				</CardContent>
 			</Card>

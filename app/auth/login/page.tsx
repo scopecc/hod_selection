@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,8 @@ export default function LoginPage() {
   const [maskedEmail, setMaskedEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const router = useRouter();
 
   const handleEmployeeIdSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +46,7 @@ export default function LoginPage() {
       if (response.ok) {
         setMaskedEmail(data.maskedEmail);
         setStep('otp-sent');
+        setResendCooldown(60); // 60 seconds cooldown
         setTimeout(() => setStep('otp-input'), 1500);
       } else {
         setError(data.error || 'Failed to send OTP');
@@ -78,7 +83,24 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setStep('success');
+        // Now establish NextAuth session using credentials provider
+        const result = await signIn('otp-verification', {
+          redirect: false,
+          employeeId: employeeId.trim(),
+          otp: otp.trim(),
+        });
+
+        if (result?.error) {
+          setError(result.error);
+          return;
+        }
+
+        // Wait a moment for session to be established
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Force a page reload to ensure session is established
+        window.location.href = '/registration';
+        return;
       } else {
         setError(data.error || 'Invalid OTP');
       }
@@ -95,7 +117,48 @@ export default function LoginPage() {
     setOtp('');
     setMaskedEmail('');
     setError('');
+    setResendCooldown(0);
   };
+
+  const handleResendOTP = async () => {
+    if (resendCooldown > 0) return;
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await fetch('/api/auth/request-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ employeeId: employeeId.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResendCooldown(60);
+        setError('');
+      } else {
+        setError(data.error || 'Failed to resend OTP');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cooldown timer effect
+  React.useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(resendCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   const renderStepIndicator = () => {
     const steps = [
@@ -238,6 +301,15 @@ export default function LoginPage() {
                     ) : (
                       'Verify OTP'
                     )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleResendOTP}
+                    disabled={loading || resendCooldown > 0}
+                  >
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
                   </Button>
                   <Button
                     type="button"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import bcrypt from 'bcryptjs';
+import { MongoClient } from 'mongodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,9 +20,14 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
     
     // Find OTP record
+    console.log('[DEBUG][verify-otp] Looking for employeeId:', employeeId);
     const otpRecord = await db.collection('otps').findOne({ employeeId });
-
+    console.log('[DEBUG][verify-otp] Found OTP record:', otpRecord ? 'YES' : 'NO');
+    
     if (!otpRecord) {
+      // Let's also check if there are any OTPs in the collection
+      const allOtps = await db.collection('otps').find({}).toArray();
+      console.log('[DEBUG][verify-otp] All OTPs in collection:', allOtps.length);
       return NextResponse.json(
         { error: 'No OTP found for this employee' },
         { status: 404 }
@@ -30,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     // Check if OTP has expired
     const now = new Date();
-    if (now > otpRecord.expiryTime) {
+    if (now > otpRecord.expiresAt) {
       // Clean up expired OTP
       await db.collection('otps').deleteOne({ employeeId });
       return NextResponse.json(
@@ -49,13 +55,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // OTP is valid - clean up and return success
-    await db.collection('otps').deleteOne({ employeeId });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Login successful',
-    });
+    // OTP is valid - return success but DON'T delete OTP yet
+    // NextAuth will delete it after successful authentication
+    console.log('[DEBUG][verify-otp] OTP is valid, returning success');
+    return NextResponse.json({ success: true });
 
   } catch (error) {
     console.error('Error in verify-otp:', error);

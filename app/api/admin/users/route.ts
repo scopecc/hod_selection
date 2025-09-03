@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { requireAdminFromRequest } from '@/lib/admin';
 
-const COLLECTION = 'employees';
+const COLLECTION = 'VIT_Auth';
 
 export async function GET(req: Request) {
 	if (!requireAdminFromRequest(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,9 +19,10 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 	}
 	const db = await getDatabase();
+	const now = new Date();
 	await db.collection(COLLECTION).updateOne(
 		{ employeeId },
-		{ $set: { name, employeeId, email, department } },
+		{ $set: { name, employeeId, email, department, updatedAt: now, createdAt: now } },
 		{ upsert: true }
 	);
 	return NextResponse.json({ success: true });

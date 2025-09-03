@@ -18,7 +18,7 @@ export default async function VerifyOTPPage() {
   const session = await getServerSession(authOptions);
   
   if (session) {
-    redirect('/dashboard');
+    redirect('/registration');
   }
 
   return (

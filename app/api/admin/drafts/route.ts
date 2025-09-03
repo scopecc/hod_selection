@@ -19,7 +19,14 @@ export async function POST(req: Request) {
 	const { name, yearStart, yearEnd } = body || {};
 	if (!name || !yearStart || !yearEnd) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 	const now = new Date();
-	const draft: Draft = { name, yearStart, yearEnd, status: 'open', createdAt: now, updatedAt: now };
+	const draft: Draft = { 
+		name, 
+		yearStart: new Date(yearStart, 0, 1), // January 1st of the year
+		yearEnd: new Date(yearEnd, 11, 31), // December 31st of the year
+		status: 'open', 
+		createdAt: now, 
+		updatedAt: now 
+	};
 	const db = await getDatabase();
 	await db.collection(COLLECTION).insertOne(draft as any);
 	return NextResponse.json({ success: true });
@@ -34,8 +41,8 @@ export async function PUT(req: Request) {
 	const updates: any = { updatedAt: new Date() };
 	if (status) updates.status = status;
 	if (name) updates.name = name;
-	if (yearStart) updates.yearStart = yearStart;
-	if (yearEnd) updates.yearEnd = yearEnd;
+	if (yearStart) updates.yearStart = new Date(yearStart, 0, 1);
+	if (yearEnd) updates.yearEnd = new Date(yearEnd, 11, 31);
 	const _id = (() => {
 		try { return new ObjectId(id); } catch { return id; }
 	})();
@@ -50,7 +57,7 @@ export async function DELETE(req: Request) {
 	if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 	const db = await getDatabase();
 	const _id = (() => { try { return new ObjectId(id); } catch { return id; }})();
-	await db.collection(COLLECTION).deleteOne({ _id });
+	await db.collection(COLLECTION).deleteOne({ _id: _id as any });
 	await db.collection('courses').deleteMany({ draftId: id });
 	await db.collection('registrations').deleteMany({ draftId: id });
 	return NextResponse.json({ success: true });

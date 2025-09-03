@@ -87,8 +87,8 @@ function DraftsTab() {
 				<CardContent>
 					<form onSubmit={create} className="grid grid-cols-1 md:grid-cols-4 gap-3">
 						<Input placeholder="Draft Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-						<Input placeholder="Year Start" value={form.yearStart} onChange={e => setForm({ ...form, yearStart: e.target.value })} required />
-						<Input placeholder="Year End" value={form.yearEnd} onChange={e => setForm({ ...form, yearEnd: e.target.value })} required />
+						<Input type="number" placeholder="Year Start" value={form.yearStart} onChange={e => setForm({ ...form, yearStart: e.target.value })} min="2020" max="2030" required />
+						<Input type="number" placeholder="Year End" value={form.yearEnd} onChange={e => setForm({ ...form, yearEnd: e.target.value })} min="2020" max="2030" required />
 						<div className="md:col-span-4"><Button type="submit">Create</Button></div>
 					</form>
 				</CardContent>
@@ -106,7 +106,7 @@ function DraftsTab() {
 							{data?.drafts?.map((d: any) => (
 								<TableRow key={d._id}>
 									<TableCell>{d.name}</TableCell>
-									<TableCell>{d.yearStart}-{d.yearEnd}</TableCell>
+									<TableCell>{new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()}</TableCell>
 									<TableCell>{d.status}</TableCell>
 									<TableCell className="space-x-2">
 										<Button onClick={() => setStatus(d._id, d.status === 'open' ? 'closed' : 'open')}>{d.status === 'open' ? 'Close' : 'Reopen'}</Button>
@@ -125,10 +125,12 @@ function DraftsTab() {
 function UploadTab() {
 	const { data: drafts } = useSWR('/api/admin/drafts', fetcher);
 	const [selectedDraft, setSelectedDraft] = useState('');
-	const [text, setText] = useState('');
+	const [file, setFile] = useState<File | null>(null);
 	const upload = async () => {
-		if (!selectedDraft) return;
-		await fetch(`/api/admin/courses?draftId=${encodeURIComponent(selectedDraft)}`, { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
+		if (!selectedDraft || !file) return;
+		const formData = new FormData();
+		formData.append('file', file);
+		await fetch(`/api/admin/courses?draftId=${encodeURIComponent(selectedDraft)}`, { method: 'POST', body: formData });
 		alert('Uploaded');
 	};
 	const clear = async () => {
@@ -143,9 +145,9 @@ function UploadTab() {
 				<CardContent className="space-y-3">
 					<select className="border rounded p-2 w-full" value={selectedDraft} onChange={e => setSelectedDraft(e.target.value)}>
 						<option value="">Select Draft</option>
-						{drafts?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({d.yearStart}-{d.yearEnd})</option>)}
+						{drafts?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()})</option>)}
 					</select>
-					<textarea className="w-full h-48 border rounded p-2" placeholder="Course Code,Course Name,Credits" value={text} onChange={e => setText(e.target.value)} />
+					<input type="file" accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e => setFile(e.target.files?.[0] || null)} />
 					<div className="flex gap-2">
 						<Button onClick={upload}>Upload</Button>
 						<Button variant="destructive" onClick={clear}>Delete Dataset</Button>
@@ -166,7 +168,7 @@ function RegistrationsTab() {
 			<div className="flex gap-2">
 				<select className="border rounded p-2" value={selectedDraft} onChange={e => setSelectedDraft(e.target.value)}>
 					<option value="">Select Draft</option>
-					{drafts?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({d.yearStart}-{d.yearEnd})</option>)}
+					{drafts?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()})</option>)}
 				</select>
 			</div>
 			{data && Object.keys(data.grouped || {}).map(batch => (

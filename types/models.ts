@@ -3,8 +3,8 @@ export type DraftStatus = 'open' | 'closed';
 export interface Draft {
 	_id?: string;
 	name: string;
-	yearStart: number;
-	yearEnd: number;
+	yearStart: Date;
+	yearEnd: Date;
 	status: DraftStatus;
 	createdAt: Date;
 	updatedAt: Date;

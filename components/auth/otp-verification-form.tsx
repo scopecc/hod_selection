@@ -78,7 +78,7 @@ export function OTPVerificationForm() {
 
       if (result?.error) throw new Error(result.error);
 
-      router.push('/auth/login-success');
+      router.push('/registration');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {

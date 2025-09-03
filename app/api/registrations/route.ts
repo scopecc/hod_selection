@@ -25,9 +25,25 @@ export async function POST(req: Request) {
 	const userName = session.user.name || '';
 	const department = (session.user as any).department || '';
 	const now = new Date();
+
+	// Ensure totalSlots = fnSlots + anSlots and sanitize types
+	const normalizedEntries = entries.map((e: any) => {
+		const fnSlots = Number(e.fnSlots || 0);
+		const anSlots = Number(e.anSlots || 0);
+		return {
+			courseCode: String(e.courseCode || ''),
+			courseName: String(e.courseName || ''),
+			credits: Number(e.credits || 0),
+			studentStrength: Number(e.studentStrength || 0),
+			fnSlots,
+			anSlots,
+			totalSlots: fnSlots + anSlots,
+			facultySchool: String(e.facultySchool || ''),
+		};
+	});
 	await db.collection('registrations').updateOne(
 		{ draftId, userId },
-		{ $set: { draftId, userId, userName, department, batch, entries, status: status || 'draft', updatedAt: now, createdAt: now } },
+		{ $set: { draftId, userId, userName, department, batch, entries: normalizedEntries, status: status || 'draft', updatedAt: now, createdAt: now } },
 		{ upsert: true }
 	);
 	return NextResponse.json({ success: true });

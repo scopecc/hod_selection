@@ -38,3 +38,9 @@ export async function getDatabase(): Promise<Db> {
 }
 
 export default clientPromise;
+
+export async function findEmployeeById(employeeId: string) {
+  const db = await getDatabase();
+  const employee = await db.collection('VIT_Auth').findOne({ employeeId });
+  return employee;
+}
