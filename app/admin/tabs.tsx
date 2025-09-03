@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Download, FileSpreadsheet } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -199,31 +200,130 @@ function RegistrationsTab() {
 	const [selectedDraft, setSelectedDraft] = useState('');
 	const { data, mutate } = useSWR(() => selectedDraft ? `/api/admin/registrations?draftId=${encodeURIComponent(selectedDraft)}` : null, fetcher, { refreshInterval: 5000 });
 	useEffect(() => { mutate(); }, [selectedDraft]);
+
+	// Function to download registrations as Excel
+	const downloadRegistrations = async () => {
+		if (!selectedDraft || !data) return;
+
+		try {
+			const response = await fetch('/api/admin/registrations/download', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ draftId: selectedDraft })
+			});
+
+			if (response.ok) {
+				const blob = await response.blob();
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `registrations_${selectedDraft}.xlsx`;
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+				document.body.removeChild(a);
+			} else {
+				alert('Failed to download registrations');
+			}
+		} catch (error) {
+			alert('Error downloading registrations');
+		}
+	};
+
+	// Group registrations by user instead of batch
+	const userWiseRegistrations = useMemo(() => {
+		if (!data?.registrations) return [];
+		
+		const userMap = new Map();
+		
+		data.registrations.forEach((reg: any) => {
+			if (!userMap.has(reg.userId)) {
+				userMap.set(reg.userId, {
+					userId: reg.userId,
+					userName: reg.userName,
+					department: reg.department,
+					entries: []
+				});
+			}
+			
+			// Add batch information to each entry
+			reg.entries.forEach((entry: any) => {
+				userMap.get(reg.userId).entries.push({
+					...entry,
+					batch: reg.batch
+				});
+			});
+		});
+
+		// Sort entries by batch in ascending order for each user
+		userMap.forEach((user) => {
+			user.entries.sort((a: any, b: any) => Number(a.batch) - Number(b.batch));
+		});
+
+		return Array.from(userMap.values());
+	}, [data]);
+
 	return (
 		<div className="space-y-4">
-			<div className="flex gap-2">
-				<select className="border rounded p-2" value={selectedDraft} onChange={e => setSelectedDraft(e.target.value)}>
-					<option value="">Select Draft</option>
-					{drafts?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()})</option>)}
-				</select>
-			</div>
-			{data && Object.keys(data.grouped || {}).map(batch => (
-				<Card key={batch}>
-					<CardHeader><CardTitle>Batch {batch}</CardTitle></CardHeader>
+			<Card>
+				<CardHeader>
+					<CardTitle>Registration Overview</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="flex gap-2 items-center">
+						<select className="border rounded p-2" value={selectedDraft} onChange={e => setSelectedDraft(e.target.value)}>
+							<option value="">Select Draft</option>
+							{drafts?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()})</option>)}
+						</select>
+						{selectedDraft && userWiseRegistrations.length > 0 && (
+							<Button onClick={downloadRegistrations} className="flex items-center gap-2">
+								<Download className="h-4 w-4" />
+								Download Excel
+							</Button>
+						)}
+					</div>
+				</CardContent>
+			</Card>
+			
+			{userWiseRegistrations.map((user) => (
+				<Card key={user.userId}>
+					<CardHeader>
+						<CardTitle className="flex items-center justify-between">
+							<span>{user.userName} ({user.userId}) - {user.department}</span>
+							<span className="text-sm text-muted-foreground">Total Courses: {user.entries.length}</span>
+						</CardTitle>
+					</CardHeader>
 					<CardContent>
-						{data.grouped[batch].map((r: any) => (
-							<div key={r._id} className="border rounded p-3 mb-3">
-								<div className="font-medium">{r.userName} ({r.userId}) - {r.department}</div>
-								<Table>
-									<TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Credits</TableHead><TableHead>Strength</TableHead><TableHead>FN</TableHead><TableHead>AN</TableHead><TableHead>Total</TableHead><TableHead>Faculty School</TableHead></TableRow></TableHeader>
-									<TableBody>
-										{r.entries.map((e: any, idx: number) => (
-											<TableRow key={idx}><TableCell>{e.courseCode}</TableCell><TableCell>{e.courseName}</TableCell><TableCell>{e.credits}</TableCell><TableCell>{e.studentStrength}</TableCell><TableCell>{e.fnSlots}</TableCell><TableCell>{e.anSlots}</TableCell><TableCell>{e.totalSlots}</TableCell><TableCell>{e.facultySchool}</TableCell></TableRow>
-										))}
-									</TableBody>
-								</Table>
-							</div>
-						))}
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Batch</TableHead>
+									<TableHead>Code</TableHead>
+									<TableHead>Name</TableHead>
+									<TableHead>Credits</TableHead>
+									<TableHead>Strength</TableHead>
+									<TableHead>FN</TableHead>
+									<TableHead>AN</TableHead>
+									<TableHead>Total</TableHead>
+									<TableHead>Faculty School</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{user.entries.map((e: any, idx: number) => (
+									<TableRow key={idx}>
+										<TableCell className="font-medium">{e.batch}</TableCell>
+										<TableCell className="font-mono text-sm">{e.courseCode}</TableCell>
+										<TableCell>{e.courseName}</TableCell>
+										<TableCell>{e.credits}</TableCell>
+										<TableCell>{e.studentStrength}</TableCell>
+										<TableCell>{e.fnSlots}</TableCell>
+										<TableCell>{e.anSlots}</TableCell>
+										<TableCell className="font-semibold">{e.totalSlots}</TableCell>
+										<TableCell>{e.facultySchool}</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
 					</CardContent>
 				</Card>
 			))}
