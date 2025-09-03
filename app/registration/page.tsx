@@ -47,18 +47,30 @@ export default function RegistrationPage() {
 		return d ? `${new Date(d.yearStart).getFullYear()}-${new Date(d.yearEnd).getFullYear()}` : '';
 	}, [selectedDraft, draftsData]);
 
+	// Generate year options between year1 and year2
+	const yearOptions = useMemo(() => {
+		const d = draftsData?.drafts?.find((d: any) => d._id === selectedDraft);
+		if (!d) return [];
+		const startYear = new Date(d.yearStart).getFullYear();
+		const endYear = new Date(d.yearEnd).getFullYear();
+		const years = [];
+		for (let year = startYear; year <= endYear; year++) {
+			years.push(year.toString());
+		}
+		return years;
+	}, [selectedDraft, draftsData]);
+
+	// Faculty school options
+	const facultySchoolOptions = ['scope', 'smec', 'sense', 'select', 'vit-bs'];
+
 	return (
 		<div className="p-4 space-y-4">
 			<Card>
 				<CardHeader><CardTitle>Registration</CardTitle></CardHeader>
-				<CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+				<CardContent className="grid grid-cols-1 md:grid-cols-1 gap-3">
 					<select className="border rounded p-2" value={selectedDraft} onChange={e => { setSelectedDraft(e.target.value); setBatch(''); }}>
 						<option value="">Select Draft</option>
 						{draftsData?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()})</option>)}
-					</select>
-					<select className="border rounded p-2" value={batch} onChange={e => setBatch(e.target.value)} disabled={!selectedDraft}>
-						<option value="">Select Batch</option>
-						{selectedDraft && (() => { const d = draftsData?.drafts?.find((x: any) => x._id === selectedDraft); if (!d) return null; const range: string[] = [`${new Date(d.yearStart).getFullYear()}-${new Date(d.yearEnd).getFullYear()}`]; return range.map(r => <option key={r} value={r}>{r}</option>); })()}
 					</select>
 				</CardContent>
 			</Card>
@@ -66,6 +78,10 @@ export default function RegistrationPage() {
 			<Card>
 				<CardHeader><CardTitle>Add Course</CardTitle></CardHeader>
 				<CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
+					<select className="border rounded p-2" value={batch} onChange={e => setBatch(e.target.value)} disabled={!selectedDraft}>
+						<option value="">Select Batch</option>
+						{yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
+					</select>
 					<input list="course-codes" className="border rounded p-2" placeholder="Course Code" value={courseCode} onChange={e => setCourseCode(e.target.value)} />
 					<datalist id="course-codes">
 						{coursesData?.courses?.map((c: any) => <option key={c.courseCode} value={c.courseCode}>{c.courseName}</option>)}
@@ -76,7 +92,10 @@ export default function RegistrationPage() {
 					<Input placeholder="FN Slots" value={fnSlots} onChange={e => setFnSlots(Number(e.target.value) || '')} />
 					<Input placeholder="AN Slots" value={anSlots} onChange={e => setAnSlots(Number(e.target.value) || '')} />
 					<Input placeholder="Total Slots" value={(Number(fnSlots || 0) + Number(anSlots || 0)) || ''} readOnly />
-					<Input placeholder="Faculty Handling School" value={facultySchool} onChange={e => setFacultySchool(e.target.value)} />
+					<select className="border rounded p-2" value={facultySchool} onChange={e => setFacultySchool(e.target.value)}>
+						<option value="">Select Faculty School</option>
+						{facultySchoolOptions.map(option => <option key={option} value={option}>{option.toUpperCase()}</option>)}
+					</select>
 					<div className="md:col-span-4"><Button onClick={addEntry}>Add Another</Button></div>
 				</CardContent>
 			</Card>
@@ -87,7 +106,7 @@ export default function RegistrationPage() {
 					<CardContent>
 						<Table>
 							<TableHeader>
-								<TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Credits</TableHead><TableHead>Strength</TableHead><TableHead>FN</TableHead><TableHead>AN</TableHead><TableHead>Total</TableHead><TableHead>School</TableHead></TableRow>
+								<TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Credits</TableHead><TableHead>Strength</TableHead><TableHead>FN</TableHead><TableHead>AN</TableHead><TableHead>Total</TableHead><TableHead>Faculty School</TableHead></TableRow>
 							</TableHeader>
 							<TableBody>
 								{entries.map((e, idx) => (

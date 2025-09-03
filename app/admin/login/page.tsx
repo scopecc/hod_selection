@@ -26,6 +26,11 @@ export default function AdminLoginPage() {
 		router.push('/admin');
 	};
 
+	const handleLogout = async () => {
+		await fetch('/api/admin/login', { method: 'DELETE' });
+		setError('');
+	};
+
 	return (
 		<div className="flex min-h-screen items-center justify-center p-4">
 			<Card className="w-full max-w-sm">
@@ -37,7 +42,10 @@ export default function AdminLoginPage() {
 						<Input placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} required />
 						<Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
 						{error && <div className="text-sm text-red-600">{error}</div>}
-						<Button disabled={loading} className="w-full" type="submit">{loading ? 'Signing in...' : 'Sign in'}</Button>
+						<div className="flex gap-2">
+							<Button disabled={loading} className="flex-1" type="submit">{loading ? 'Signing in...' : 'Sign in'}</Button>
+							<Button type="button" variant="outline" onClick={handleLogout}>Clear Session</Button>
+						</div>
 					</form>
 				</CardContent>
 			</Card>

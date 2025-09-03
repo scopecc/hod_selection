@@ -6,33 +6,66 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 function UsersTab() {
 	const { data, mutate } = useSWR('/api/admin/users', fetcher);
 	const [form, setForm] = useState({ name: '', employeeId: '', email: '', department: '' });
+	const [editingUser, setEditingUser] = useState<any>(null);
+	const [isEditing, setIsEditing] = useState(false);
+
+	// Department options
+	const departmentOptions = ['scope', 'smec', 'sense', 'select', 'vit-bs'];
+
 	const submit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		await fetch('/api/admin/users', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
+		if (isEditing) {
+			await fetch('/api/admin/users', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
+		} else {
+			await fetch('/api/admin/users', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
+		}
 		setForm({ name: '', employeeId: '', email: '', department: '' });
+		setEditingUser(null);
+		setIsEditing(false);
 		mutate();
 	};
+
+	const editUser = (user: any) => {
+		setForm({ name: user.name, employeeId: user.employeeId, email: user.email, department: user.department });
+		setEditingUser(user);
+		setIsEditing(true);
+	};
+
+	const cancelEdit = () => {
+		setForm({ name: '', employeeId: '', email: '', department: '' });
+		setEditingUser(null);
+		setIsEditing(false);
+	};
+
 	const remove = async (employeeId: string) => {
 		await fetch(`/api/admin/users?employeeId=${encodeURIComponent(employeeId)}`, { method: 'DELETE' });
 		mutate();
 	};
+
 	return (
 		<div className="space-y-4">
 			<Card>
-				<CardHeader><CardTitle>Add/Update User</CardTitle></CardHeader>
+				<CardHeader><CardTitle>{isEditing ? 'Update User' : 'Add User'}</CardTitle></CardHeader>
 				<CardContent>
 					<form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-4 gap-3">
 						<Input placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-						<Input placeholder="EmpID" value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} required />
+						<Input placeholder="EmpID" value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} required disabled={isEditing} />
 						<Input placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-						<Input placeholder="Department" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} required />
-						<div className="md:col-span-4"><Button type="submit">Save</Button></div>
+						<select className="border rounded p-2" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} required>
+							<option value="">Select Department</option>
+							{departmentOptions.map(option => <option key={option} value={option}>{option.toUpperCase()}</option>)}
+						</select>
+						<div className="md:col-span-4 flex gap-2">
+							<Button type="submit">{isEditing ? 'Update' : 'Save'}</Button>
+							{isEditing && <Button type="button" variant="outline" onClick={cancelEdit}>Cancel</Button>}
+						</div>
 					</form>
 				</CardContent>
 			</Card>
@@ -42,7 +75,7 @@ function UsersTab() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead>Name</TableHead><TableHead>EmpID</TableHead><TableHead>Email</TableHead><TableHead>Department</TableHead><TableHead></TableHead>
+								<TableHead>Name</TableHead><TableHead>EmpID</TableHead><TableHead>Email</TableHead><TableHead>Department</TableHead><TableHead>Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -52,7 +85,10 @@ function UsersTab() {
 									<TableCell>{u.employeeId}</TableCell>
 									<TableCell>{u.email}</TableCell>
 									<TableCell>{u.department}</TableCell>
-									<TableCell className="text-right"><Button variant="destructive" onClick={() => remove(u.employeeId)}>Delete</Button></TableCell>
+									<TableCell className="space-x-2">
+										<Button variant="outline" size="sm" onClick={() => editUser(u)}>Edit</Button>
+										<Button variant="destructive" size="sm" onClick={() => remove(u.employeeId)}>Delete</Button>
+									</TableCell>
 								</TableRow>
 							))}
 						</TableBody>
@@ -179,7 +215,7 @@ function RegistrationsTab() {
 							<div key={r._id} className="border rounded p-3 mb-3">
 								<div className="font-medium">{r.userName} ({r.userId}) - {r.department}</div>
 								<Table>
-									<TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Credits</TableHead><TableHead>Strength</TableHead><TableHead>FN</TableHead><TableHead>AN</TableHead><TableHead>Total</TableHead><TableHead>School</TableHead></TableRow></TableHeader>
+									<TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Credits</TableHead><TableHead>Strength</TableHead><TableHead>FN</TableHead><TableHead>AN</TableHead><TableHead>Total</TableHead><TableHead>Faculty School</TableHead></TableRow></TableHeader>
 									<TableBody>
 										{r.entries.map((e: any, idx: number) => (
 											<TableRow key={idx}><TableCell>{e.courseCode}</TableCell><TableCell>{e.courseName}</TableCell><TableCell>{e.credits}</TableCell><TableCell>{e.studentStrength}</TableCell><TableCell>{e.fnSlots}</TableCell><TableCell>{e.anSlots}</TableCell><TableCell>{e.totalSlots}</TableCell><TableCell>{e.facultySchool}</TableCell></TableRow>
@@ -196,19 +232,32 @@ function RegistrationsTab() {
 }
 
 export default function AdminTabs() {
+	const router = useRouter();
+
+	const handleLogout = async () => {
+		await fetch('/api/admin/login', { method: 'DELETE' });
+		router.push('/admin/login');
+	};
+
 	return (
-		<Tabs defaultValue="users" className="p-4">
-			<TabsList>
-				<TabsTrigger value="users">Users</TabsTrigger>
-				<TabsTrigger value="drafts">Drafts</TabsTrigger>
-				<TabsTrigger value="upload">Upload</TabsTrigger>
-				<TabsTrigger value="registrations">Registrations</TabsTrigger>
-			</TabsList>
-			<TabsContent value="users"><UsersTab /></TabsContent>
-			<TabsContent value="drafts"><DraftsTab /></TabsContent>
-			<TabsContent value="upload"><UploadTab /></TabsContent>
-			<TabsContent value="registrations"><RegistrationsTab /></TabsContent>
-		</Tabs>
+		<div>
+			<div className="flex justify-between items-center p-4 border-b">
+				<h1 className="text-2xl font-bold">Admin Dashboard</h1>
+				<Button variant="outline" onClick={handleLogout}>Logout</Button>
+			</div>
+			<Tabs defaultValue="users" className="p-4">
+				<TabsList>
+					<TabsTrigger value="users">Users</TabsTrigger>
+					<TabsTrigger value="drafts">Drafts</TabsTrigger>
+					<TabsTrigger value="upload">Upload</TabsTrigger>
+					<TabsTrigger value="registrations">Registrations</TabsTrigger>
+				</TabsList>
+				<TabsContent value="users"><UsersTab /></TabsContent>
+				<TabsContent value="drafts"><DraftsTab /></TabsContent>
+				<TabsContent value="upload"><UploadTab /></TabsContent>
+				<TabsContent value="registrations"><RegistrationsTab /></TabsContent>
+			</Tabs>
+		</div>
 	);
 }
 
