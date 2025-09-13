@@ -31,10 +31,26 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
 	if (!requireAdminFromRequest(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	const body = await req.json();
-	const { employeeId, ...updates } = body || {};
+	const { employeeId, name, email, department, ...updates } = body || {};
 	if (!employeeId) return NextResponse.json({ error: 'employeeId required' }, { status: 400 });
 	const db = await getDatabase();
-	await db.collection(COLLECTION).updateOne({ employeeId }, { $set: updates });
+	// Update user in VIT_Auth
+	await db.collection(COLLECTION).updateOne({ employeeId }, { $set: { ...updates, name, email, department } });
+
+	// Also update name/email/department in registrations and user_drafts
+	if (name || email || department) {
+		const regUpdate: any = {};
+		if (name) regUpdate.userName = name;
+		if (department) regUpdate.department = department;
+		await db.collection('registrations').updateMany(
+			{ userId: employeeId },
+			{ $set: regUpdate }
+		);
+		await db.collection('user_drafts').updateMany(
+			{ userId: employeeId },
+			{ $set: regUpdate }
+		);
+	}
 	return NextResponse.json({ success: true });
 }
 

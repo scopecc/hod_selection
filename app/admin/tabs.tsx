@@ -226,8 +226,8 @@ function RegistrationsTab() {
 	};
 
 	// Function to download a single user's registrations as Excel
-	const downloadUserRegistration = async (userId: string, userName: string) => {
-		if (!selectedDraft || !userId || !userName || !drafts?.drafts) return;
+	const downloadUserRegistration = async (userId: string, userName: string, userDept: string) => {
+		if (!selectedDraft || !userId || !userName || !drafts?.drafts || !userDept) return;
 		const draft = drafts.drafts.find((d: any) => d._id === selectedDraft);
 		const draftName = draft ? draft.name : selectedDraft;
 		try {
@@ -241,7 +241,7 @@ function RegistrationsTab() {
 				const url = window.URL.createObjectURL(blob);
 				const a = document.createElement('a');
 				a.href = url;
-				a.download = `${userName}_${userId}_${draftName}.xlsx`;
+				a.download = `${userName}_${userDept}_${draftName}.xlsx`;
 				document.body.appendChild(a);
 				a.click();
 				window.URL.revokeObjectURL(url);
@@ -307,7 +307,7 @@ function RegistrationsTab() {
 								<span>{user.userName} ({user.userId}) - {user.department}</span>
 								<span className="flex items-center gap-2">
 									<span className="text-sm text-muted-foreground">Total Courses: {user.entries.length}</span>
-									<Button variant="ghost" size="sm" onClick={() => downloadUserRegistration(user.userId, user.userName)} title="Download Excel">
+									<Button variant="ghost" size="sm" onClick={() => downloadUserRegistration(user.userId, user.userName, user.department)} title="Download Excel">
 										<Download className="h-4 w-4" />
 									</Button>
 								</span>
