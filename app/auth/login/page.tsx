@@ -12,6 +12,7 @@ import { Loader2, Mail, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 
 type Step = 'employee-id' | 'otp-sent' | 'otp-input' | 'success';
 
+
 export default function LoginPage() {
   const [step, setStep] = useState<Step>('employee-id');
   const [employeeId, setEmployeeId] = useState('');
@@ -21,6 +22,14 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // If already logged in, redirect to /registration
+  React.useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/registration');
+    }
+  }, [status, router]);
 
   const handleEmployeeIdSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
