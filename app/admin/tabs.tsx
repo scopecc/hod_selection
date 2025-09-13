@@ -17,8 +17,6 @@ function UsersTab() {
 	const [editingUser, setEditingUser] = useState<any>(null);
 	const [isEditing, setIsEditing] = useState(false);
 
-	// Department options
-	const departmentOptions = ['scope', 'smec', 'sense', 'select', 'vit-bs'];
 
 	const submit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -59,10 +57,7 @@ function UsersTab() {
 						<Input placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
 						<Input placeholder="EmpID" value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} required disabled={isEditing} />
 						<Input placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-						<select className="border rounded p-2" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} required>
-							<option value="">Select Department</option>
-							{departmentOptions.map(option => <option key={option} value={option}>{option.toUpperCase()}</option>)}
-						</select>
+						<Input placeholder="Department" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} required />
 						<div className="md:col-span-4 flex gap-2">
 							<Button type="submit">{isEditing ? 'Update' : 'Save'}</Button>
 							{isEditing && <Button type="button" variant="outline" onClick={cancelEdit}>Cancel</Button>}

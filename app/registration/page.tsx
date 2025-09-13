@@ -14,6 +14,12 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 export default function RegistrationPage() {
 	const router = useRouter();
 	const { data: draftsData } = useSWR('/api/drafts', fetcher);
+	const [user, setUser] = useState<{ name?: string; id?: string } | null>(null);
+	useEffect(() => {
+		fetch('/api/auth/session').then(res => res.json()).then(data => {
+			setUser(data?.user || null);
+		});
+	}, []);
 	// Logout handler
 	const handleLogout = async () => {
 		await signOut({ redirect: false });
@@ -197,20 +203,27 @@ export default function RegistrationPage() {
 	// Faculty school options
 	const facultySchoolOptions = ['scope', 'smec', 'sense', 'select', 'vit-bs'];
 
-	return (
+		return (
 			<div className="p-4 space-y-4">
+				{/* User Info Banner */}
+				{user && (
+					<div className="mb-4 p-3 rounded bg-blue-50 border border-blue-200 flex items-center gap-4">
+						<span className="font-semibold text-blue-900">Welcome!, {user.name}</span>
+						<span className="text-blue-700">Emp Id: ({user.id})</span>
+					</div>
+				)}
 				{/* Logout Button */}
 				<div className="flex justify-end">
 					<Button variant="outline" onClick={handleLogout}>
 						Logout
 					</Button>
 				</div>
-			{/* Message Display */}
-			{message && (
-				<div className={`p-3 rounded-lg ${message.includes('successfully') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
-					{message}
-				</div>
-			)}
+				{/* Message Display */}
+				{message && (
+					<div className={`p-3 rounded-lg ${message.includes('successfully') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
+						{message}
+					</div>
+				)}
 
 			<Card>
 				<CardHeader><CardTitle>Registration</CardTitle></CardHeader>
