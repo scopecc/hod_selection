@@ -10,44 +10,46 @@ export async function POST(req: Request) {
 
 	try {
 		const body = await req.json();
-		const { draftId } = body;
+		const { draftId, userId } = body;
 
 		if (!draftId) {
 			return NextResponse.json({ error: 'draftId required' }, { status: 400 });
 		}
 
 		const db = await getDatabase();
+		const query: any = { draftId, status: 'submitted' };
+		if (userId) query.userId = userId;
 		const registrations = await db.collection('registrations')
-			.find({ draftId, status: 'submitted' })
+			.find(query)
 			.toArray();
 
 		if (registrations.length === 0) {
 			return NextResponse.json({ error: 'No registrations found' }, { status: 404 });
 		}
 
-		// Prepare data for Excel
-		const excelData = [];
+				// Prepare data for Excel
+						const excelData: any[] = [];
 		
-		registrations.forEach((reg) => {
-			reg.entries.forEach((entry: any) => {
-				excelData.push({
-					'User ID': reg.userId,
-					'User Name': reg.userName,
-					'Department': reg.department,
-					'Batch': reg.batch,
-					'Course Code': entry.courseCode,
-					'Course Name': entry.courseName,
-					'Credits': entry.credits,
-					'Student Strength': entry.studentStrength,
-					'FN Slots': entry.fnSlots,
-					'AN Slots': entry.anSlots,
-					'Total Slots': entry.totalSlots,
-					'Faculty School': entry.facultySchool,
-					'Status': reg.status,
-					'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString() : ''
+				registrations.forEach((reg) => {
+					reg.entries.forEach((entry: any) => {
+						excelData.push({
+							'User ID': reg.userId,
+							'User Name': reg.userName,
+							'Department': reg.department,
+							'Batch': reg.batch,
+							'Course Code': entry.courseCode,
+							'Course Name': entry.courseName,
+							'Credits': entry.credits,
+							'Student Strength': entry.studentStrength,
+							'FN Slots': entry.fnSlots,
+							'AN Slots': entry.anSlots,
+							'Total Slots': entry.totalSlots,
+							'Faculty School': entry.facultySchool,
+							'Status': reg.status,
+							'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString() : ''
+						});
+					});
 				});
-			});
-		});
 
 		// Create workbook and worksheet
 		const workbook = XLSX.utils.book_new();

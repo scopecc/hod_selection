@@ -1,5 +1,6 @@
 'use client';
 import useSWR from 'swr';
+import { signOut } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,13 @@ import { Trash2, Edit, Save, Send, Plus, X } from 'lucide-react';
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function RegistrationPage() {
+	const router = useRouter();
 	const { data: draftsData } = useSWR('/api/drafts', fetcher);
+	// Logout handler
+	const handleLogout = async () => {
+		await signOut({ redirect: false });
+		router.push('/');
+	};
 	const [selectedDraft, setSelectedDraft] = useState('');
 	const [batch, setBatch] = useState('');
 	const { data: coursesData } = useSWR(() => selectedDraft ? `/api/courses?draftId=${encodeURIComponent(selectedDraft)}` : null, fetcher);
@@ -36,7 +43,7 @@ export default function RegistrationPage() {
 	useEffect(() => {
 		if (existingRegistration?.registration) {
 			setEntries(existingRegistration.registration.entries || []);
-			setBatch(existingRegistration.registration.batch || '');
+			setBatch('');
 		} else {
 			setEntries([]);
 			setBatch('');
@@ -74,7 +81,6 @@ export default function RegistrationPage() {
 			facultySchool,
 			batch
 		};
-		
 		if (editingIndex !== null) {
 			// Update existing entry
 			const newEntries = [...entries];
@@ -96,7 +102,7 @@ export default function RegistrationPage() {
 		setFnSlots(entry.fnSlots);
 		setAnSlots(entry.anSlots);
 		setFacultySchool(entry.facultySchool);
-		setBatch(entry.batch || batch);
+		setBatch(entry.batch);
 		setEditingIndex(index);
 	};
 
@@ -109,8 +115,8 @@ export default function RegistrationPage() {
 	};
 
 	const save = async (status: 'draft' | 'submitted') => {
-		if (!selectedDraft || !batch || entries.length === 0) {
-			setMessage('Please select a draft, batch, and add at least one course');
+		if (!selectedDraft || entries.length === 0) {
+			setMessage('Please select a draft and add at least one course');
 			return;
 		}
 
@@ -121,7 +127,7 @@ export default function RegistrationPage() {
 			const response = await fetch('/api/registrations', { 
 				method: 'POST', 
 				headers: { 'content-type': 'application/json' }, 
-				body: JSON.stringify({ draftId: selectedDraft, batch, entries, status }) 
+				body: JSON.stringify({ draftId: selectedDraft, entries, status }) 
 			});
 
 			if (response.ok) {
@@ -154,11 +160,9 @@ export default function RegistrationPage() {
 	// Sort entries by batch in ascending order
 	const sortedEntries = useMemo(() => {
 		return [...entries].sort((a, b) => {
-			const batchA = a.batch || batch;
-			const batchB = b.batch || batch;
-			return Number(batchA) - Number(batchB);
+			return Number(a.batch) - Number(b.batch);
 		});
-	}, [entries, batch]);
+	}, [entries]);
 
 	// Generate year options between year1 and year2
 	const yearOptions = useMemo(() => {
@@ -177,7 +181,13 @@ export default function RegistrationPage() {
 	const facultySchoolOptions = ['scope', 'smec', 'sense', 'select', 'vit-bs'];
 
 	return (
-		<div className="p-4 space-y-4">
+			<div className="p-4 space-y-4">
+				{/* Logout Button */}
+				<div className="flex justify-end">
+					<Button variant="outline" onClick={handleLogout}>
+						Logout
+					</Button>
+				</div>
 			{/* Message Display */}
 			{message && (
 				<div className={`p-3 rounded-lg ${message.includes('successfully') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
@@ -257,7 +267,7 @@ export default function RegistrationPage() {
 							<TableBody>
 								{sortedEntries.map((e, idx) => (
 									<TableRow key={idx}>
-										<TableCell className="font-medium">{e.batch || batch}</TableCell>
+										<TableCell className="font-medium">{e.batch}</TableCell>
 										<TableCell className="font-mono text-sm">{e.courseCode}</TableCell>
 										<TableCell>{e.courseName}</TableCell>
 										<TableCell>{e.credits}</TableCell>

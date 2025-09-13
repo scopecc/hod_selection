@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
 	};
 
 	const handleLogout = async () => {
-		await fetch('/api/admin/login', { method: 'DELETE' });
+		await fetch('/', { method: 'DELETE' });
 		setError('');
 	};
 

@@ -18,8 +18,8 @@ export async function POST(req: Request) {
 	const session = await getServerSession(authOptions);
 	if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	const body = await req.json();
-	const { draftId, batch, entries, status } = body || {};
-	if (!draftId || !batch || !Array.isArray(entries)) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+	const { draftId, entries, status } = body || {};
+	if (!draftId || !Array.isArray(entries)) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 	const db = await getDatabase();
 	const userId = session.user.id as string;
 	const userName = session.user.name || '';
@@ -39,11 +39,12 @@ export async function POST(req: Request) {
 			anSlots,
 			totalSlots: fnSlots + anSlots,
 			facultySchool: String(e.facultySchool || ''),
+			batch: String(e.batch || ''),
 		};
 	});
 	await db.collection('registrations').updateOne(
 		{ draftId, userId },
-		{ $set: { draftId, userId, userName, department, batch, entries: normalizedEntries, status: status || 'draft', updatedAt: now, createdAt: now } },
+		{ $set: { draftId, userId, userName, department, entries: normalizedEntries, status: status || 'draft', updatedAt: now, createdAt: now } },
 		{ upsert: true }
 	);
 	return NextResponse.json({ success: true });

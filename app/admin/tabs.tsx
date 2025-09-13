@@ -201,17 +201,15 @@ function RegistrationsTab() {
 	const { data, mutate } = useSWR(() => selectedDraft ? `/api/admin/registrations?draftId=${encodeURIComponent(selectedDraft)}` : null, fetcher, { refreshInterval: 5000 });
 	useEffect(() => { mutate(); }, [selectedDraft]);
 
-	// Function to download registrations as Excel
+	// Function to download all registrations as Excel
 	const downloadRegistrations = async () => {
 		if (!selectedDraft || !data) return;
-
 		try {
 			const response = await fetch('/api/admin/registrations/download', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ draftId: selectedDraft })
 			});
-
 			if (response.ok) {
 				const blob = await response.blob();
 				const url = window.URL.createObjectURL(blob);
@@ -230,12 +228,37 @@ function RegistrationsTab() {
 		}
 	};
 
-	// Group registrations by user instead of batch
+	// Function to download a single user's registrations as Excel
+	const downloadUserRegistration = async (userId: string) => {
+		if (!selectedDraft || !userId) return;
+		try {
+			const response = await fetch('/api/admin/registrations/download', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ draftId: selectedDraft, userId })
+			});
+			if (response.ok) {
+				const blob = await response.blob();
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `registration_${userId}_${selectedDraft}.xlsx`;
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+				document.body.removeChild(a);
+			} else {
+				alert('Failed to download user registration');
+			}
+		} catch (error) {
+			alert('Error downloading user registration');
+		}
+	};
+
+	// Group registrations by user
 	const userWiseRegistrations = useMemo(() => {
 		if (!data?.registrations) return [];
-		
 		const userMap = new Map();
-		
 		data.registrations.forEach((reg: any) => {
 			if (!userMap.has(reg.userId)) {
 				userMap.set(reg.userId, {
@@ -245,21 +268,14 @@ function RegistrationsTab() {
 					entries: []
 				});
 			}
-			
-			// Add batch information to each entry
 			reg.entries.forEach((entry: any) => {
-				userMap.get(reg.userId).entries.push({
-					...entry,
-					batch: reg.batch
-				});
+				userMap.get(reg.userId).entries.push({ ...entry });
 			});
 		});
-
 		// Sort entries by batch in ascending order for each user
 		userMap.forEach((user) => {
 			user.entries.sort((a: any, b: any) => Number(a.batch) - Number(b.batch));
 		});
-
 		return Array.from(userMap.values());
 	}, [data]);
 
@@ -285,48 +301,53 @@ function RegistrationsTab() {
 				</CardContent>
 			</Card>
 			
-			{userWiseRegistrations.map((user) => (
-				<Card key={user.userId}>
-					<CardHeader>
-						<CardTitle className="flex items-center justify-between">
-							<span>{user.userName} ({user.userId}) - {user.department}</span>
-							<span className="text-sm text-muted-foreground">Total Courses: {user.entries.length}</span>
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Batch</TableHead>
-									<TableHead>Code</TableHead>
-									<TableHead>Name</TableHead>
-									<TableHead>Credits</TableHead>
-									<TableHead>Strength</TableHead>
-									<TableHead>FN</TableHead>
-									<TableHead>AN</TableHead>
-									<TableHead>Total</TableHead>
-									<TableHead>Faculty School</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{user.entries.map((e: any, idx: number) => (
-									<TableRow key={idx}>
-										<TableCell className="font-medium">{e.batch}</TableCell>
-										<TableCell className="font-mono text-sm">{e.courseCode}</TableCell>
-										<TableCell>{e.courseName}</TableCell>
-										<TableCell>{e.credits}</TableCell>
-										<TableCell>{e.studentStrength}</TableCell>
-										<TableCell>{e.fnSlots}</TableCell>
-										<TableCell>{e.anSlots}</TableCell>
-										<TableCell className="font-semibold">{e.totalSlots}</TableCell>
-										<TableCell>{e.facultySchool}</TableCell>
+				{userWiseRegistrations.map((user) => (
+					<Card key={user.userId}>
+						<CardHeader>
+							<CardTitle className="flex items-center justify-between">
+								<span>{user.userName} ({user.userId}) - {user.department}</span>
+								<span className="flex items-center gap-2">
+									<span className="text-sm text-muted-foreground">Total Courses: {user.entries.length}</span>
+									<Button variant="ghost" size="sm" onClick={() => downloadUserRegistration(user.userId)} title="Download Excel">
+										<Download className="h-4 w-4" />
+									</Button>
+								</span>
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Batch</TableHead>
+										<TableHead>Code</TableHead>
+										<TableHead>Name</TableHead>
+										<TableHead>Credits</TableHead>
+										<TableHead>Strength</TableHead>
+										<TableHead>FN</TableHead>
+										<TableHead>AN</TableHead>
+										<TableHead>Total</TableHead>
+										<TableHead>Faculty School</TableHead>
 									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-			))}
+								</TableHeader>
+								<TableBody>
+									{user.entries.map((e: any, idx: number) => (
+										<TableRow key={idx}>
+											<TableCell className="font-medium">{e.batch}</TableCell>
+											<TableCell className="font-mono text-sm">{e.courseCode}</TableCell>
+											<TableCell>{e.courseName}</TableCell>
+											<TableCell>{e.credits}</TableCell>
+											<TableCell>{e.studentStrength}</TableCell>
+											<TableCell>{e.fnSlots}</TableCell>
+											<TableCell>{e.anSlots}</TableCell>
+											<TableCell className="font-semibold">{e.totalSlots}</TableCell>
+											<TableCell>{e.facultySchool}</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						</CardContent>
+					</Card>
+				))}
 		</div>
 	);
 }
@@ -336,7 +357,7 @@ export default function AdminTabs() {
 
 	const handleLogout = async () => {
 		await fetch('/api/admin/login', { method: 'DELETE' });
-		router.push('/admin/login');
+		router.push('/');
 	};
 
 	return (
