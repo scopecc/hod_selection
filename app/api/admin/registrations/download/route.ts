@@ -27,29 +27,39 @@ export async function POST(req: Request) {
 			return NextResponse.json({ error: 'No registrations found' }, { status: 404 });
 		}
 
-				// Prepare data for Excel
-						const excelData: any[] = [];
-		
-				registrations.forEach((reg) => {
-					reg.entries.forEach((entry: any) => {
-						excelData.push({
-							'User ID': reg.userId,
-							'User Name': reg.userName,
-							'Department': reg.department,
-							'Batch': entry.batch,
-							'Course Code': entry.courseCode,
-							'Course Name': entry.courseName,
-							'Credits': entry.credits,
-							'Student Strength': entry.studentStrength,
-							'FN Slots': entry.fnSlots,
-							'AN Slots': entry.anSlots,
-							'Total Slots': entry.totalSlots,
-							'Faculty School': entry.facultySchool,
-							'Status': reg.status,
-							'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString() : ''
-						});
-					});
-				});
+		// Prepare data for Excel
+		const excelData: any[] = [];
+		registrations.forEach((reg) => {
+			reg.entries.forEach((entry: any) => {
+							excelData.push({
+								'Batch': entry.batch,
+								'Course Code': entry.courseCode,
+								'Course Name': entry.courseName,
+								'Credits': entry.credits,
+								'Group': entry.group || '',
+								'Student Strength': entry.studentStrength,
+								'FN Slots': entry.fnSlots,
+								'AN Slots': entry.anSlots,
+								'Total Slots': entry.totalSlots,
+								'Faculty School': entry.facultySchool,
+								'Status': reg.status,
+								'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleString() : ''
+							});
+			});
+		});
+
+		// Get name, department, and draft name for filename
+		let fileName = `registrations_${draftId}.xlsx`;
+		try {
+			const db = await getDatabase();
+			const draft = await db.collection('drafts').findOne({ _id: draftId });
+			const reg0 = registrations[0];
+			if (reg0 && draft) {
+				// Clean for filename
+				const safe = (s: string) => String(s || '').replace(/[^a-zA-Z0-9-_]/g, '_');
+				fileName = `${safe(reg0.userName)}-${safe(reg0.department)}-${safe(draft.name)}.xlsx`;
+			}
+		} catch {}
 
 		// Create workbook and worksheet
 		const workbook = XLSX.utils.book_new();
@@ -84,7 +94,7 @@ export async function POST(req: Request) {
 		return new NextResponse(excelBuffer, {
 			headers: {
 				'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-				'Content-Disposition': `attachment; filename="registrations_${draftId}.xlsx"`
+				'Content-Disposition': `attachment; filename="${fileName}"`
 			}
 		});
 

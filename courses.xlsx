@@ -1,16 +1,16 @@
-Course Code,Course Name,Credits
-CSE101,Introduction to Programming,4
-CSE201,Data Structures and Algorithms,3
-CSE301,Operating Systems,3
-MAT101,Engineering Mathematics I,4
-MAT201,Discrete Mathematics,3
-PHY101,Engineering Physics,4
-CHE101,Engineering Chemistry,4
-EEE101,Basics of Electrical Engineering,3
-HUM101,Professional Communication,2
-CSE401,Database Management Systems,3
-CSE402,Computer Networks,3
-CSE403,Software Engineering,3
-CSE404,Artificial Intelligence,3
-CSE405,Machine Learning,3
-CSE406,Cloud Computing,3
+Course Code,Course Name,Credits,Group
+CSE101,Introduction to Programming,4,discipline core
+CSE201,Data Structures and Algorithms,3,discipline core
+CSE301,Operating Systems,3,discipline elective
+MAT101,Engineering Mathematics I,4,discipline elective
+MAT201,Discrete Mathematics,3,open elective
+PHY101,Engineering Physics,4,discipline core
+CHE101,Engineering Chemistry,4,open elective
+EEE101,Basics of Electrical Engineering,3,discipline core
+HUM101,Professional Communication,2,open elective
+CSE401,Database Management Systems,3,discipline core
+CSE402,Computer Networks,3,open elective
+CSE403,Software Engineering,3,discipline core
+CSE404,Artificial Intelligence,3,discipline core
+CSE405,Machine Learning,3,discipline core
+CSE406,Cloud Computing,3,open elective

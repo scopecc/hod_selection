@@ -318,6 +318,7 @@ function RegistrationsTab() {
 										<TableHead>Name</TableHead>
 										<TableHead>Credits</TableHead>
 										<TableHead>Strength</TableHead>
+										<TableHead>Group</TableHead>
 										<TableHead>FN</TableHead>
 										<TableHead>AN</TableHead>
 										<TableHead>Total</TableHead>
@@ -332,6 +333,7 @@ function RegistrationsTab() {
 											<TableCell>{e.courseName}</TableCell>
 											<TableCell>{e.credits}</TableCell>
 											<TableCell>{e.studentStrength}</TableCell>
+											<TableCell>{e.group}</TableCell>
 											<TableCell>{e.fnSlots}</TableCell>
 											<TableCell>{e.anSlots}</TableCell>
 											<TableCell className="font-semibold">{e.totalSlots}</TableCell>

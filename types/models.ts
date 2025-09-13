@@ -16,12 +16,14 @@ export interface Course {
 	courseCode: string;
 	courseName: string;
 	credits: number;
+	group?: string;
 }
 
 export interface RegistrationEntry {
 	courseCode: string;
 	courseName: string;
 	credits: number;
+	group?: string;
 	studentStrength: number;
 	fnSlots: number;
 	anSlots: number;

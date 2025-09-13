@@ -49,6 +49,7 @@ export default function RegistrationPage() {
 	const [courseCode, setCourseCode] = useState('');
 	const [courseName, setCourseName] = useState('');
 	const [credits, setCredits] = useState<number | ''>('');
+	const [group, setGroup] = useState('');
 	const [studentStrength, setStudentStrength] = useState<number | ''>('');
 	const [fnSlots, setFnSlots] = useState<number | ''>('');
 	const [anSlots, setAnSlots] = useState<number | ''>('');
@@ -78,15 +79,20 @@ export default function RegistrationPage() {
 	}, [userDraft]);
 
 	useEffect(() => {
-		if (!courseCode) { setCourseName(''); setCredits(''); return; }
+		if (!courseCode) { setCourseName(''); setCredits(''); setGroup(''); return; }
 		const c = coursesData?.courses?.find((c: any) => c.courseCode === courseCode);
-		if (c) { setCourseName(c.courseName); setCredits(c.credits); }
+		if (c) {
+			setCourseName(c.courseName);
+			setCredits(c.credits);
+			setGroup(c.group || '');
+		}
 	}, [courseCode, coursesData]);
 
 	const resetForm = () => {
 		setCourseCode('');
 		setCourseName('');
 		setCredits('');
+		setGroup('');
 		setStudentStrength('');
 		setFnSlots('');
 		setAnSlots('');
@@ -101,6 +107,7 @@ export default function RegistrationPage() {
 			courseCode, 
 			courseName, 
 			credits: Number(credits), 
+			group,
 			studentStrength: Number(studentStrength), 
 			fnSlots: Number(fnSlots), 
 			anSlots: Number(anSlots), 
@@ -125,6 +132,7 @@ export default function RegistrationPage() {
 		setCourseCode(entry.courseCode);
 		setCourseName(entry.courseName);
 		setCredits(entry.credits);
+		setGroup(entry.group || '');
 		setStudentStrength(entry.studentStrength);
 		setFnSlots(entry.fnSlots);
 		setAnSlots(entry.anSlots);
@@ -266,6 +274,7 @@ export default function RegistrationPage() {
 					<Input placeholder="Course Name" value={courseName} readOnly />
 					<Input placeholder="Credits" value={credits} readOnly />
 					<Input placeholder="Total Student Strength" value={studentStrength} onChange={e => setStudentStrength(Number(e.target.value) || '')} />
+					<Input placeholder="Group" value={group} readOnly />
 					<Input placeholder="FN Slots" value={fnSlots} onChange={e => setFnSlots(Number(e.target.value) || '')} />
 					<Input placeholder="AN Slots" value={anSlots} onChange={e => setAnSlots(Number(e.target.value) || '')} />
 					<Input placeholder="Total Slots" value={(Number(fnSlots || 0) + Number(anSlots || 0)) || ''} readOnly />
@@ -304,6 +313,7 @@ export default function RegistrationPage() {
 									<TableHead>Name</TableHead>
 									<TableHead>Credits</TableHead>
 									<TableHead>Strength</TableHead>
+									<TableHead>Group</TableHead>
 									<TableHead>FN</TableHead>
 									<TableHead>AN</TableHead>
 									<TableHead>Total</TableHead>
@@ -319,6 +329,7 @@ export default function RegistrationPage() {
 										<TableCell>{e.courseName}</TableCell>
 										<TableCell>{e.credits}</TableCell>
 										<TableCell>{e.studentStrength}</TableCell>
+										<TableCell>{e.group}</TableCell>
 										<TableCell>{e.fnSlots}</TableCell>
 										<TableCell>{e.anSlots}</TableCell>
 										<TableCell className="font-semibold">{e.totalSlots}</TableCell>

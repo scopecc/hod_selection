@@ -2,19 +2,19 @@ import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { requireAdminFromRequest } from '@/lib/admin';
 
-// Simple CSV parsing for Course Code, Course Name, Credits
-function parseCSV(text: string): { courseCode: string; courseName: string; credits: number }[] {
+// Simple CSV parsing for Course Code, Course Name, Credits, Group
+function parseCSV(text: string): { courseCode: string; courseName: string; credits: number; group?: string }[] {
 	const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-	const rows = [] as { courseCode: string; courseName: string; credits: number }[];
+	const rows = [] as { courseCode: string; courseName: string; credits: number; group?: string }[];
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 		const cells = line.split(',').map(c => c.trim());
 		if (i === 0 && /course\s*code/i.test(cells[0])) continue; // skip header
 		if (cells.length < 3) continue;
-		const [courseCode, courseName, creditsStr] = cells;
+		const [courseCode, courseName, creditsStr, group] = cells;
 		const credits = Number(creditsStr);
 		if (!courseCode || !courseName || Number.isNaN(credits)) continue;
-		rows.push({ courseCode, courseName, credits });
+		rows.push({ courseCode, courseName, credits, group });
 	}
 	return rows;
 }
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
 	// Accept multipart/form-data (file input), CSV text, or binary Excel
 	const contentType = req.headers.get('content-type') || '';
-	let rows: { courseCode: string; courseName: string; credits: number }[] = [];
+	let rows: { courseCode: string; courseName: string; credits: number; group?: string }[] = [];
 	if (contentType.includes('multipart/form-data')) {
 		const formData = await req.formData();
 		const file = formData.get('file');
@@ -41,7 +41,8 @@ export async function POST(req: Request) {
 			const courseCode = String(r['Course Code'] ?? r['Code'] ?? r['courseCode'] ?? '').trim();
 			const courseName = String(r['Course Name'] ?? r['Name'] ?? r['courseName'] ?? '').trim();
 			const credits = Number(r['Credits'] ?? r['Credit'] ?? r['credits'] ?? 0);
-			return { courseCode, courseName, credits };
+			const group = String(r['Group'] ?? r['group'] ?? '').trim();
+			return { courseCode, courseName, credits, group };
 		}).filter(r => r.courseCode && r.courseName && Number.isFinite(r.credits));
 	} else if (contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || contentType.includes('application/vnd.ms-excel')) {
 		const buffer = new Uint8Array(await req.arrayBuffer());
@@ -49,7 +50,12 @@ export async function POST(req: Request) {
 		const workbook = XLSX.read(buffer, { type: 'array' });
 		const sheetName = workbook.SheetNames[0];
 		rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' }) as any;
-		rows = rows.map((r: any) => ({ courseCode: String(r['Course Code'] ?? r['Code'] ?? r['courseCode'] ?? '').trim(), courseName: String(r['Course Name'] ?? r['Name'] ?? r['courseName'] ?? '').trim(), credits: Number(r['Credits'] ?? r['Credit'] ?? r['credits'] ?? 0) })).filter(r => r.courseCode && r.courseName && Number.isFinite(r.credits));
+		rows = rows.map((r: any) => ({
+		courseCode: String(r['Course Code'] ?? r['Code'] ?? r['courseCode'] ?? '').trim(),
+		courseName: String(r['Course Name'] ?? r['Name'] ?? r['courseName'] ?? '').trim(),
+		credits: Number(r['Credits'] ?? r['Credit'] ?? r['credits'] ?? 0),
+		group: String(r['Group'] ?? r['group'] ?? '').trim()
+	})).filter(r => r.courseCode && r.courseName && Number.isFinite(r.credits));
 	} else if (contentType.includes('text/csv')) {
 		const text = await req.text();
 		rows = parseCSV(text);

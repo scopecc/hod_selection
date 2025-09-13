@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 			courseCode: String(e.courseCode || ''),
 			courseName: String(e.courseName || ''),
 			credits: Number(e.credits || 0),
+			group: String(e.group || ''),
 			studentStrength: Number(e.studentStrength || 0),
 			fnSlots,
 			anSlots,
