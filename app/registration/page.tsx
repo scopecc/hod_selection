@@ -12,6 +12,23 @@ import { Trash2, Edit, Save, Send, Plus, X } from 'lucide-react';
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function RegistrationPage() {
+	// Block back navigation to login pages after login
+	useEffect(() => {
+		const forbidden = ['/auth/login', '/auth/signin', '/auth', '/login'];
+		const handlePopState = () => {
+			if (forbidden.includes(window.location.pathname)) {
+				window.location.replace('/registration');
+			}
+		};
+		window.addEventListener('popstate', handlePopState);
+		return () => window.removeEventListener('popstate', handlePopState);
+	}, []);
+	// Prevent back navigation to login if already logged in
+	useEffect(() => {
+		if (window.location.pathname === '/registration') {
+			window.history.replaceState(null, '', '/registration');
+		}
+	}, []);
 	const router = useRouter();
 	const { data: draftsData } = useSWR('/api/drafts', fetcher);
 	const [user, setUser] = useState<{ name?: string; id?: string } | null>(null);
@@ -208,7 +225,7 @@ export default function RegistrationPage() {
 				{/* User Info Banner */}
 				{user && (
 					<div className="mb-4 p-3 rounded bg-blue-50 border border-blue-200 flex items-center gap-4">
-						<span className="font-semibold text-blue-900">Welcome!, {user.name}</span>
+						<span className="font-semibold text-blue-900">Welcome! {user.name}</span>
 						<span className="text-blue-700">Emp Id: ({user.id})</span>
 					</div>
 				)}

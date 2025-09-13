@@ -1,6 +1,84 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html, body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+  min-height: 100vh;
+  color: #1e293b;
+  letter-spacing: 0.01em;
+  font-size: 1.05rem;
+  scroll-behavior: smooth;
+}
+
+/* Modern card shadow and rounded corners */
+.card, .bg-white, .rounded-lg, .rounded-xl, .shadow, .shadow-lg, .shadow-md {
+  border-radius: 1.1rem !important;
+  box-shadow: 0 4px 24px 0 rgba(30,41,59,0.08), 0 1.5px 6px 0 rgba(30,41,59,0.04);
+  background: #fff;
+  transition: box-shadow 0.25s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1);
+}
+
+/* Button polish */
+button, .btn, .Button, .shadcn-button, .bg-blue-600, .bg-emerald-600 {
+  font-weight: 500;
+  border-radius: 0.7rem;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+  box-shadow: 0 2px 8px 0 rgba(16, 112, 202, 0.08);
+}
+button:hover, .btn:hover, .Button:hover, .shadcn-button:hover, .bg-blue-600:hover, .bg-emerald-600:hover {
+  filter: brightness(1.08);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 24px 0 rgba(16, 112, 202, 0.13);
+}
+
+/* Input polish */
+input, select, textarea {
+  border-radius: 0.6rem;
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  transition: border 0.18s, box-shadow 0.18s;
+  font-size: 1rem;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px #6366f133;
+  outline: none;
+}
+
+/* Table polish */
+table {
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 12px 0 rgba(30,41,59,0.06);
+}
+th, td {
+  padding: 0.7em 1em;
+  font-size: 1rem;
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.7s cubic-bezier(.4,0,.2,1);
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Misc polish */
+.shadow-pop {
+  animation: shadowPop 0.4s cubic-bezier(.4,0,.2,1);
+}
+@keyframes shadowPop {
+  0% { box-shadow: 0 0 0 0 rgba(99,102,241,0.18); }
+  100% { box-shadow: 0 6px 24px 0 rgba(99,102,241,0.18); }
+}
 
 :root {
   --foreground-rgb: 0, 0, 0;

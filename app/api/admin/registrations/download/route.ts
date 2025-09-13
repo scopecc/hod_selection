@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 							'User ID': reg.userId,
 							'User Name': reg.userName,
 							'Department': reg.department,
-							'Batch': reg.batch,
+							'Batch': entry.batch,
 							'Course Code': entry.courseCode,
 							'Course Name': entry.courseName,
 							'Credits': entry.credits,
