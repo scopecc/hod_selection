@@ -100,7 +100,19 @@ function DraftsTab() {
 	const [form, setForm] = useState({ name: '', yearStart: '', yearEnd: '' });
 	const create = async (e: React.FormEvent) => {
 		e.preventDefault();
-		await fetch('/api/admin/drafts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: form.name, yearStart: Number(form.yearStart), yearEnd: Number(form.yearEnd) }) });
+		const res = await fetch('/api/admin/drafts', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ name: form.name, yearStart: Number(form.yearStart), yearEnd: Number(form.yearEnd) })
+		});
+		if (res.status === 409) {
+			alert('A draft with this name already exists. Please choose a different name.');
+			return;
+		}
+		if (!res.ok) {
+			alert('Failed to create draft.');
+			return;
+		}
 		setForm({ name: '', yearStart: '', yearEnd: '' });
 		mutate();
 	};

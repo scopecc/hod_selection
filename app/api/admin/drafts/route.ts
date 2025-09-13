@@ -18,6 +18,12 @@ export async function POST(req: Request) {
 	const body = await req.json();
 	const { name, yearStart, yearEnd } = body || {};
 	if (!name || !yearStart || !yearEnd) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+	const db = await getDatabase();
+	// Check for duplicate draft name
+	const existing = await db.collection(COLLECTION).findOne({ name });
+	if (existing) {
+		return NextResponse.json({ error: 'Draft with this name already exists' }, { status: 409 });
+	}
 	const now = new Date();
 	const draft: Draft = { 
 		name, 
@@ -27,7 +33,6 @@ export async function POST(req: Request) {
 		createdAt: now, 
 		updatedAt: now 
 	};
-	const db = await getDatabase();
 	await db.collection(COLLECTION).insertOne(draft as any);
 	return NextResponse.json({ success: true });
 }
