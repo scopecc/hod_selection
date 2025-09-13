@@ -230,19 +230,18 @@ export default function RegistrationPage() {
 
 		return (
 			<div className="p-4 space-y-4">
-				{/* User Info Banner */}
+				{/* User Info Banner and Logout Button on same line */}
 				{user && (
-					<div className="mb-4 p-3 rounded bg-blue-50 border border-blue-200 flex items-center gap-4">
-						<span className="font-semibold text-blue-900">Welcome! {user.name}</span>
-						<span className="text-blue-700">Emp Id: ({user.id})</span>
+					<div className="mb-4 flex items-center justify-between p-3 rounded bg-blue-50 border border-blue-200">
+						<div className="flex items-center gap-4">
+							<span className="font-semibold text-blue-900">Welcome! {user.name}</span>
+							<span className="text-blue-700">Emp Id: ({user.id})</span>
+						</div>
+						<Button variant="outline" onClick={handleLogout}>
+							Logout
+						</Button>
 					</div>
 				)}
-				{/* Logout Button */}
-				<div className="flex justify-end">
-					<Button variant="outline" onClick={handleLogout}>
-						Logout
-					</Button>
-				</div>
 				{/* Message Display */}
 				{message && (
 					<div className={`p-3 rounded-lg ${message.includes('successfully') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
