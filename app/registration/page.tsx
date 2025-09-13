@@ -35,20 +35,24 @@ export default function RegistrationPage() {
 	const [message, setMessage] = useState('');
 
 	// Load existing registration if available
-	const { data: existingRegistration, mutate } = useSWR(
-		() => selectedDraft ? `/api/registrations?draftId=${encodeURIComponent(selectedDraft)}` : null, 
+	const { data: userDraft, mutate: mutateDraft } = useSWR(
+		selectedDraft ? `/api/user_drafts?draftId=${encodeURIComponent(selectedDraft)}` : null,
+		fetcher
+	);
+	const { data: existingRegistration, mutate: mutateRegistration } = useSWR(
+		selectedDraft ? `/api/registrations?draftId=${encodeURIComponent(selectedDraft)}` : null,
 		fetcher
 	);
 
 	useEffect(() => {
-		if (existingRegistration?.registration) {
-			setEntries(existingRegistration.registration.entries || []);
+		if (userDraft?.draft) {
+			setEntries(userDraft.draft.entries || []);
 			setBatch('');
 		} else {
 			setEntries([]);
 			setBatch('');
 		}
-	}, [existingRegistration]);
+	}, [userDraft]);
 
 	useEffect(() => {
 		if (!courseCode) { setCourseName(''); setCredits(''); return; }
@@ -114,33 +118,25 @@ export default function RegistrationPage() {
 		}
 	};
 
-	const save = async (status: 'draft' | 'submitted') => {
+	const saveDraft = async () => {
 		if (!selectedDraft || entries.length === 0) {
 			setMessage('Please select a draft and add at least one course');
 			return;
 		}
-
 		setLoading(true);
 		setMessage('');
-
 		try {
-			const response = await fetch('/api/registrations', { 
-				method: 'POST', 
-				headers: { 'content-type': 'application/json' }, 
-				body: JSON.stringify({ draftId: selectedDraft, entries, status }) 
+			const response = await fetch('/api/user_drafts', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ draftId: selectedDraft, entries })
 			});
-
 			if (response.ok) {
-				setMessage(status === 'submitted' ? 'Registration submitted successfully!' : 'Draft saved successfully!');
-				mutate(); // Refresh the data
-				if (status === 'submitted') {
-					// Clear form after successful submission
-					setEntries([]);
-					setBatch('');
-				}
+				setMessage('Draft saved successfully!');
+				mutateDraft();
 			} else {
 				const error = await response.json();
-				setMessage(error.error || 'Failed to save registration');
+				setMessage(error.error || 'Failed to save draft');
 			}
 		} catch (error) {
 			setMessage('Network error occurred');
@@ -150,11 +146,32 @@ export default function RegistrationPage() {
 	};
 
 	const submit = async () => {
-		await save('submitted');
-	};
-
-	const saveDraft = async () => {
-		await save('draft');
+		if (!selectedDraft || entries.length === 0) {
+			setMessage('Please select a draft and add at least one course');
+			return;
+		}
+		setLoading(true);
+		setMessage('');
+		try {
+			const response = await fetch('/api/registrations', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ draftId: selectedDraft, entries, status: 'submitted' })
+			});
+			if (response.ok) {
+				setMessage('Registration submitted successfully!');
+				mutateRegistration();
+				setEntries([]);
+				setBatch('');
+			} else {
+				const error = await response.json();
+				setMessage(error.error || 'Failed to submit registration');
+			}
+		} catch (error) {
+			setMessage('Network error occurred');
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	// Sort entries by batch in ascending order
