@@ -198,7 +198,9 @@ function RegistrationsTab() {
 
 	// Function to download all registrations as Excel
 	const downloadRegistrations = async () => {
-		if (!selectedDraft || !data) return;
+		if (!selectedDraft || !data || !drafts?.drafts) return;
+		const draft = drafts.drafts.find((d: any) => d._id === selectedDraft);
+		const draftName = draft ? draft.name : selectedDraft;
 		try {
 			const response = await fetch('/api/admin/registrations/download', {
 				method: 'POST',
@@ -210,7 +212,7 @@ function RegistrationsTab() {
 				const url = window.URL.createObjectURL(blob);
 				const a = document.createElement('a');
 				a.href = url;
-				a.download = `registrations_${selectedDraft}.xlsx`;
+				a.download = `registrations_${draftName}.xlsx`;
 				document.body.appendChild(a);
 				a.click();
 				window.URL.revokeObjectURL(url);
@@ -224,8 +226,10 @@ function RegistrationsTab() {
 	};
 
 	// Function to download a single user's registrations as Excel
-	const downloadUserRegistration = async (userId: string) => {
-		if (!selectedDraft || !userId) return;
+	const downloadUserRegistration = async (userId: string, userName: string) => {
+		if (!selectedDraft || !userId || !userName || !drafts?.drafts) return;
+		const draft = drafts.drafts.find((d: any) => d._id === selectedDraft);
+		const draftName = draft ? draft.name : selectedDraft;
 		try {
 			const response = await fetch('/api/admin/registrations/download', {
 				method: 'POST',
@@ -237,7 +241,7 @@ function RegistrationsTab() {
 				const url = window.URL.createObjectURL(blob);
 				const a = document.createElement('a');
 				a.href = url;
-				a.download = `registration_${userId}_${selectedDraft}.xlsx`;
+				a.download = `${userName}_${userId}_${draftName}.xlsx`;
 				document.body.appendChild(a);
 				a.click();
 				window.URL.revokeObjectURL(url);
@@ -303,7 +307,7 @@ function RegistrationsTab() {
 								<span>{user.userName} ({user.userId}) - {user.department}</span>
 								<span className="flex items-center gap-2">
 									<span className="text-sm text-muted-foreground">Total Courses: {user.entries.length}</span>
-									<Button variant="ghost" size="sm" onClick={() => downloadUserRegistration(user.userId)} title="Download Excel">
+									<Button variant="ghost" size="sm" onClick={() => downloadUserRegistration(user.userId, user.userName)} title="Download Excel">
 										<Download className="h-4 w-4" />
 									</Button>
 								</span>

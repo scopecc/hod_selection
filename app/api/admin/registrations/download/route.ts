@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 			});
 		});
 
-		// Get name, department, and draft name for filename
+		// Get username, userId, and draft name for filename
 		let fileName = `registrations_${draftId}.xlsx`;
 		try {
 			const db = await getDatabase();
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 			if (reg0 && draft) {
 				// Clean for filename
 				const safe = (s: string) => String(s || '').replace(/[^a-zA-Z0-9-_]/g, '_');
-				fileName = `${safe(reg0.userName)}-${safe(reg0.department)}-${safe(draft.name)}.xlsx`;
+				fileName = `${safe(reg0.userName)}_${safe(reg0.userId)}_${safe(draft.name)}.xlsx`;
 			}
 		} catch {}
 
