@@ -4,6 +4,7 @@ import { signOut } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Listbox } from '@headlessui/react';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
@@ -266,10 +267,58 @@ export default function RegistrationPage() {
 						<option value="">Select Batch</option>
 						{yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
 					</select>
-					<input list="course-codes" className="border rounded p-2" placeholder="Course Code" value={courseCode} onChange={e => setCourseCode(e.target.value)} />
-					<datalist id="course-codes">
-						{coursesData?.courses?.map((c: any) => <option key={c.courseCode} value={c.courseCode}>{c.courseName}</option>)}
-					</datalist>
+														{/* Searchable Listbox for Course Name, styled to match input/select */}
+														{(() => {
+															const [search, setSearch] = useState('');
+															const filteredCourses = coursesData?.courses?.filter((c: any) =>
+																c.courseName.toLowerCase().includes(search.toLowerCase())
+															) || [];
+															// Find selected course for display
+															const selectedCourse = coursesData?.courses?.find((c: any) => c.courseCode === courseCode);
+															return (
+																<div className="relative w-full">
+																	<Listbox value={courseCode} onChange={setCourseCode} disabled={!coursesData?.courses?.length}>
+																		<div className="relative">
+																			<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+																				<span className="truncate text-left">
+																					{selectedCourse ? `${selectedCourse.courseName} (${selectedCourse.courseCode})` : 'Select Course'}
+																				</span>
+																				<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+																			</Listbox.Button>
+																			<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+																				<div className="sticky top-0 bg-white dark:bg-zinc-900 px-2 py-2">
+																					<input
+																						type="text"
+																						className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+																						placeholder="Search course name..."
+																						value={search}
+																						onChange={e => setSearch(e.target.value)}
+																						autoFocus
+																					/>
+																				</div>
+																				{filteredCourses.length ? (
+																					filteredCourses.map((c: any) => (
+																						<Listbox.Option
+																							key={c.courseCode}
+																							value={c.courseCode}
+																							className={(
+																								{ active, selected }: { active: boolean; selected: boolean }
+																							) =>
+																								`cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`
+																							}
+																						>
+																							{c.courseName} <span className="text-xs text-zinc-400">({c.courseCode})</span>
+																						</Listbox.Option>
+																					))
+																				) : (
+																					<div className="px-3 py-2 text-zinc-400">No courses found</div>
+																				)}
+																			</Listbox.Options>
+																		</div>
+																	</Listbox>
+																</div>
+															);
+														})()}
 					<Input placeholder="Course Name" value={courseName} readOnly />
 					<Input placeholder="Credits" value={credits} readOnly />
 					<Input placeholder="Total Student Strength" value={studentStrength} onChange={e => setStudentStrength(Number(e.target.value) || '')} />
