@@ -1,0 +1,7 @@
+In the global excel file download on the admin side make sure u include these columns
+
+1. sno. prgramme, year of course, course title, 
+
+pre-requiste missing
+basket missing --> when mutliple 
+remarks missing

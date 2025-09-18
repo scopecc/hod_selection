@@ -29,22 +29,25 @@ export async function POST(req: Request) {
 
 		// Prepare data for Excel
 		const excelData: any[] = [];
-		registrations.forEach((reg) => {
-			reg.entries.forEach((entry: any) => {
-							excelData.push({
-								'Batch': entry.batch,
-								'Course Code': entry.courseCode,
-								'Course Name': entry.courseName,
-								'Credits': entry.credits,
-								'Group': entry.group || '',
-								'Student Strength': entry.studentStrength,
-								'FN Slots': entry.fnSlots,
-								'AN Slots': entry.anSlots,
-								'Total Slots': entry.totalSlots,
-								'Faculty School': entry.facultySchool,
-								'Status': reg.status,
-								'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleString() : ''
-							});
+		registrations.forEach((reg, regIdx) => {
+			reg.entries.forEach((entry: any, entryIdx: number) => {
+				excelData.push({
+					'SNO.': excelData.length + 1,
+					'Department': reg.department || '',
+					'Batch': entry.batch,
+					'Course Code': entry.courseCode,
+					'Course Name': entry.courseName,
+					'Credits': entry.credits,
+					'Group': entry.group || '',
+					'Student Strength': entry.studentStrength,
+					'FN Slots': entry.fnSlots,
+					'AN Slots': entry.anSlots,
+					'Total Slots': entry.totalSlots,
+					'Faculty School': entry.facultySchool,
+					'Prerequisites': Array.isArray(entry.prerequisites) && entry.prerequisites.length > 0 ? entry.prerequisites.join(', ') : '',
+					'Status': reg.status,
+					'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleString() : ''
+				});
 			});
 		});
 
@@ -63,26 +66,13 @@ export async function POST(req: Request) {
 
 		// Create workbook and worksheet
 		const workbook = XLSX.utils.book_new();
+		// Dynamically set column widths based on content
 		const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-		// Set column widths
-		const columnWidths = [
-			{ wch: 15 }, // User ID
-			{ wch: 25 }, // User Name
-			{ wch: 15 }, // Department
-			{ wch: 10 }, // Batch
-			{ wch: 15 }, // Course Code
-			{ wch: 40 }, // Course Name
-			{ wch: 10 }, // Credits
-			{ wch: 15 }, // Student Strength
-			{ wch: 12 }, // FN Slots
-			{ wch: 12 }, // AN Slots
-			{ wch: 12 }, // Total Slots
-			{ wch: 15 }, // Faculty School
-			{ wch: 12 }, // Status
-			{ wch: 15 }  // Submitted Date
-		];
-		worksheet['!cols'] = columnWidths;
+		const keys = Object.keys(excelData[0] || {});
+		worksheet['!cols'] = keys.map(key => {
+			const maxLen = Math.max(key.length, ...excelData.map(row => String(row[key] || '').length));
+			return { wch: Math.min(Math.max(maxLen + 2, 10), 40) };
+		});
 
 		// Add worksheet to workbook
 		XLSX.utils.book_append_sheet(workbook, worksheet, 'Registrations');
