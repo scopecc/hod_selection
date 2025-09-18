@@ -51,13 +51,15 @@ export default function RegistrationPage() {
 	const [courseName, setCourseName] = useState('');
 	const [credits, setCredits] = useState<number | ''>('');
 	const [group, setGroup] = useState('');
-	const [studentStrength, setStudentStrength] = useState<number | ''>('');
+		const [studentStrength, setStudentStrength] = useState<number | ''>('');
 	const [fnSlots, setFnSlots] = useState<number | ''>('');
 	const [anSlots, setAnSlots] = useState<number | ''>('');
 	const [facultySchool, setFacultySchool] = useState('');
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [message, setMessage] = useState('');
+	const [prerequisites, setPrerequisites] = useState<string[]>([]);
+	const [prereqSearch, setPrereqSearch] = useState('');
 
 	// Load existing registration if available
 	const { data: userDraft, mutate: mutateDraft } = useSWR(
@@ -99,22 +101,29 @@ export default function RegistrationPage() {
 		setAnSlots('');
 		setFacultySchool('');
 		setEditingIndex(null);
+		setPrerequisites([]);
 	};
+
+	const filteredCourses = coursesData?.courses?.filter((c: any) =>
+		c.courseName.toLowerCase().includes(prereqSearch.toLowerCase()) ||
+		c.courseCode.toLowerCase().includes(prereqSearch.toLowerCase())
+	) || [];
 
 	const addEntry = () => {
 		if (!batch || !courseCode || !courseName || !credits || !studentStrength || !fnSlots || !anSlots || !facultySchool) return;
 		const totalSlots = Number(fnSlots) + Number(anSlots);
-		const newEntry = { 
-			courseCode, 
-			courseName, 
-			credits: Number(credits), 
+		const newEntry = {
+			courseCode,
+			courseName,
+			credits: Number(credits),
 			group,
-			studentStrength: Number(studentStrength), 
-			fnSlots: Number(fnSlots), 
-			anSlots: Number(anSlots), 
-			totalSlots, 
+			studentStrength: Number(studentStrength),
+			fnSlots: Number(fnSlots),
+			anSlots: Number(anSlots),
+			totalSlots,
 			facultySchool,
-			batch
+			batch,
+			prerequisites: [...prerequisites]
 		};
 		if (editingIndex !== null) {
 			// Update existing entry
@@ -140,6 +149,7 @@ export default function RegistrationPage() {
 		setFacultySchool(entry.facultySchool);
 		setBatch(entry.batch);
 		setEditingIndex(index);
+		setPrerequisites(entry.prerequisites || []);
 	};
 
 	const deleteEntry = (index: number) => {
@@ -330,6 +340,63 @@ export default function RegistrationPage() {
 						<option value="">Select Faculty School</option>
 						{facultySchoolOptions.map(option => <option key={option} value={option}>{option.toUpperCase()}</option>)}
 					</select>
+					{/* Prerequisites Multi-Select Listbox */}
+					<div className="relative w-full md:col-span-4">
+						<label className="block mb-1 text-sm font-medium">Prerequisites</label>
+						<Listbox value={prerequisites} onChange={setPrerequisites} multiple>
+							<div className="relative">
+								<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+									<span className="truncate text-left">
+										{prerequisites.length === 0 ? 'Select prerequisites' : prerequisites.map(code => {
+											const c = coursesData?.courses?.find((c: any) => c.courseCode === code);
+											return c ? `${c.courseName} (${c.courseCode})` : code;
+										}).join(', ')}
+									</span>
+									<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+								</Listbox.Button>
+								<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+									<div className="sticky top-0 bg-white dark:bg-zinc-900 px-2 py-2">
+										<input
+											type="text"
+											className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+											placeholder="Search course name/code..."
+											value={prereqSearch}
+											onChange={e => setPrereqSearch(e.target.value)}
+											autoFocus
+										/>
+									</div>
+									{filteredCourses.length ? (
+										filteredCourses.map((c: any) => (
+											<Listbox.Option
+												key={c.courseCode}
+												value={c.courseCode}
+												className={({ active, selected }: { active: boolean; selected: boolean }) =>
+													`cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`
+												}
+											>
+												{c.courseName} <span className="text-xs text-zinc-400">({c.courseCode})</span>
+												{prerequisites.includes(c.courseCode) && <span className="ml-2 text-green-500">✓</span>}
+											</Listbox.Option>
+										))
+									) : (
+										<div className="px-3 py-2 text-zinc-400">No courses found</div>
+									)}
+								</Listbox.Options>
+							</div>
+						</Listbox>
+						{/* Show selected prerequisites as removable chips */}
+						<div className="flex flex-wrap gap-2 mt-2">
+							{prerequisites.map(code => {
+								const c = coursesData?.courses?.find((c: any) => c.courseCode === code);
+								return (
+									<span key={code} className="inline-flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 text-xs">
+										{c ? `${c.courseName} (${c.courseCode})` : code}
+										<button type="button" className="ml-1 text-red-500 hover:text-red-700" onClick={() => setPrerequisites(prerequisites.filter(p => p !== code))}>&times;</button>
+									</span>
+								);
+							})}
+						</div>
+					</div>
 					<div className="md:col-span-4 flex gap-2">
 						<Button 
 							onClick={addEntry} 
@@ -366,6 +433,7 @@ export default function RegistrationPage() {
 									<TableHead>AN</TableHead>
 									<TableHead>Total</TableHead>
 									<TableHead>Faculty School</TableHead>
+									<TableHead>Prerequisites</TableHead>
 									<TableHead>Actions</TableHead>
 								</TableRow>
 							</TableHeader>
@@ -382,6 +450,8 @@ export default function RegistrationPage() {
 										<TableCell>{e.anSlots}</TableCell>
 										<TableCell className="font-semibold">{e.totalSlots}</TableCell>
 										<TableCell>{e.facultySchool}</TableCell>
+										{/* Prerequisites column: show only course codes */}
+										<TableCell>{Array.isArray(e.prerequisites) && e.prerequisites.length > 0 ? e.prerequisites.join(', ') : '-'}</TableCell>
 										<TableCell className="space-x-2">
 											<Button variant="outline" size="sm" onClick={() => editEntry(idx)}>
 												<Edit className="h-3 w-3 mr-1" />

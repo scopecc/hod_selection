@@ -40,6 +40,7 @@ export async function POST(req: Request) {
 			totalSlots: fnSlots + anSlots,
 			facultySchool: String(e.facultySchool || ''),
 			batch: String(e.batch || ''),
+			prerequisites: Array.isArray(e.prerequisites) ? e.prerequisites.map(String) : []
 		};
 	});
 	await db.collection('user_drafts').updateOne(

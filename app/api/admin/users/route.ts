@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
 	if (!requireAdminFromRequest(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	const body = await req.json();
-	const { name, employeeId, email, department } = body || {};
+	const { name, employeeId, email, department, programme } = body || {};
 	if (!name || !employeeId || !email || !department) {
 		return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 	}
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 	const now = new Date();
 	await db.collection(COLLECTION).updateOne(
 		{ employeeId },
-		{ $set: { name, employeeId, email, department, updatedAt: now, createdAt: now } },
+		{ $set: { name, employeeId, email, department, programme, updatedAt: now, createdAt: now } },
 		{ upsert: true }
 	);
 	return NextResponse.json({ success: true });

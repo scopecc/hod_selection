@@ -8,37 +8,76 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Download, FileSpreadsheet } from 'lucide-react';
+import { Listbox } from '@headlessui/react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 function UsersTab() {
 	const { data, mutate } = useSWR('/api/admin/users', fetcher);
-	const [form, setForm] = useState({ name: '', employeeId: '', email: '', department: '' });
+	const departmentOptions = [
+		'SAS', 'SBST', 'SCE', 'SCHEME', 'SCOPE', 'SCORE', 'SELECT', 'SENSE', 'SHINE', 'SMEC', 'SSL', 'HOT', 'VAIAL', 'VIT BS', 'V-SIGN', 'V-SMART', 'V-SPARC'
+	];
+	const programmeOptions = [
+		{ degree: 'BTech', programme: 'CSE', representation: 'BCE' },
+		{ degree: 'BTech', programme: 'AIML', representation: 'BAI' },
+		{ degree: 'BTech', programme: 'AIR', representation: 'BRS' },
+		{ degree: 'BTech', programme: 'Cyber Security', representation: 'BYB' },
+		{ degree: 'BTech', programme: 'Data Science', representation: 'BDS' },
+		{ degree: 'BTech', programme: 'CPS', representation: 'BPS' },
+		{ degree: 'MTech (Int)', programme: 'Business Analytics (2021–2024) / Data Science (2025)', representation: 'MIA / MID' },
+		{ degree: 'MTech (Int)', programme: 'SE', representation: 'MIS' },
+		{ degree: 'MTech', programme: 'CSE', representation: 'MCS' },
+		{ degree: 'MTech', programme: 'AIML', representation: 'MAI' },
+		{ degree: 'MTech LTI', programme: 'AIML', representation: 'MML' },
+		{ degree: 'MTech LTI', programme: 'AIDS', representation: 'MAS' },
+		{ degree: 'MCA', programme: '—', representation: 'MCA' },
+		{ degree: 'BSC', programme: '—', representation: 'BCS' }
+	];
+	const [form, setForm] = useState({ name: '', employeeId: '', email: '', department: '', programme: '' });
 	const [editingUser, setEditingUser] = useState<any>(null);
 	const [isEditing, setIsEditing] = useState(false);
+	const [programmeSearch, setProgrammeSearch] = useState('');
+	const filteredProgrammeOptions = programmeOptions.filter(opt =>
+		(`${opt.degree} ${opt.programme} ${opt.representation}`.toLowerCase().includes(programmeSearch.toLowerCase()))
+	);
+	const [departmentSearch, setDepartmentSearch] = useState('');
+	const filteredDepartmentOptions = departmentOptions.filter(opt =>
+		opt.toLowerCase().includes(departmentSearch.toLowerCase())
+	);
 
 
 	const submit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (isEditing) {
-			await fetch('/api/admin/users', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
-		} else {
-			await fetch('/api/admin/users', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
+		// Ensure programme is included in payload
+		const payload = { ...form };
+		if (!payload.programme) {
+			payload.programme = '';
 		}
-		setForm({ name: '', employeeId: '', email: '', department: '' });
+		if (isEditing) {
+			await fetch('/api/admin/users', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+		} else {
+			await fetch('/api/admin/users', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+		}
+		setForm({ name: '', employeeId: '', email: '', department: '', programme: '' });
 		setEditingUser(null);
 		setIsEditing(false);
 		mutate();
 	};
 
 	const editUser = (user: any) => {
-		setForm({ name: user.name, employeeId: user.employeeId, email: user.email, department: user.department });
+		setForm({
+			name: user.name,
+			employeeId: user.employeeId,
+			email: user.email,
+			department: user.department,
+			programme: user.programme || ''
+		});
 		setEditingUser(user);
 		setIsEditing(true);
 	};
 
 	const cancelEdit = () => {
-		setForm({ name: '', employeeId: '', email: '', department: '' });
+		setForm({ name: '', employeeId: '', email: '', department: '', programme: '' });
 		setEditingUser(null);
 		setIsEditing(false);
 	};
@@ -53,15 +92,90 @@ function UsersTab() {
 			<Card>
 				<CardHeader><CardTitle>{isEditing ? 'Update User' : 'Add User'}</CardTitle></CardHeader>
 				<CardContent>
-					<form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-4 gap-3">
-						<Input placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-						<Input placeholder="EmpID" value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} required disabled={isEditing} />
-						<Input placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-						<Input placeholder="Department" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} required />
-						<div className="md:col-span-4 flex gap-2">
-							<Button type="submit">{isEditing ? 'Update' : 'Save'}</Button>
-							{isEditing && <Button type="button" variant="outline" onClick={cancelEdit}>Cancel</Button>}
-						</div>
+					<form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-5 gap-3">
+							<Input placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+							<Input placeholder="EmpID" value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} required disabled={isEditing} />
+							<Input placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+							{/* Department Listbox */}
+							<div className="relative w-full">
+								<Listbox value={form.department} onChange={val => setForm({ ...form, department: val })}>
+									<div className="relative">
+										<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+											<span className="truncate text-left">{form.department || 'Select Department'}</span>
+											<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+										</Listbox.Button>
+										<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+											<div className="sticky top-0 bg-white dark:bg-zinc-900 px-2 py-2">
+												<input
+													type="text"
+													className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+													placeholder="Search department..."
+													value={departmentSearch}
+													onChange={e => setDepartmentSearch(e.target.value)}
+													autoFocus
+												/>
+											</div>
+											{filteredDepartmentOptions.length ? (
+												filteredDepartmentOptions.map((opt, idx) => (
+													<Listbox.Option
+														key={idx}
+														value={opt}
+														className={({ active, selected }: { active: boolean; selected: boolean }) =>
+															`cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`
+														}
+													>
+														{opt}
+													</Listbox.Option>
+												))
+											) : (
+												<div className="px-3 py-2 text-zinc-400">No departments found</div>
+											)}
+										</Listbox.Options>
+									</div>
+								</Listbox>
+							</div>
+							{/* Programme Listbox */}
+							<div className="relative w-full">
+								<Listbox value={form.programme} onChange={val => setForm({ ...form, programme: val })}>
+									<div className="relative">
+										<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+											<span className="truncate text-left">{form.programme || 'Select Programme'}</span>
+											<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+										</Listbox.Button>
+										<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+											<div className="sticky top-0 bg-white dark:bg-zinc-900 px-2 py-2">
+												<input
+													type="text"
+													className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+													placeholder="Search programme..."
+													value={programmeSearch}
+													onChange={e => setProgrammeSearch(e.target.value)}
+													autoFocus
+												/>
+											</div>
+											{filteredProgrammeOptions.length ? (
+												filteredProgrammeOptions.map((opt, idx) => (
+													<Listbox.Option
+														key={idx}
+														value={`${opt.degree} ${opt.programme} (${opt.representation})`}
+														className={({ active, selected }: { active: boolean; selected: boolean }) =>
+															`cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`
+														}
+													>
+														{opt.degree} {opt.programme} <span className="text-xs text-zinc-400">({opt.representation})</span>
+													</Listbox.Option>
+												))
+											) : (
+												<div className="px-3 py-2 text-zinc-400">No programmes found</div>
+											)}
+										</Listbox.Options>
+									</div>
+								</Listbox>
+							</div>
+							<div className="md:col-span-5 flex gap-2">
+									<Button type="submit">{isEditing ? 'Update' : 'Save'}</Button>
+									{isEditing && <Button type="button" variant="outline" onClick={cancelEdit}>Cancel</Button>}
+							</div>
 					</form>
 				</CardContent>
 			</Card>
@@ -71,7 +185,12 @@ function UsersTab() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead>Name</TableHead><TableHead>EmpID</TableHead><TableHead>Email</TableHead><TableHead>Department</TableHead><TableHead>Actions</TableHead>
+								<TableHead>Name</TableHead>
+								<TableHead>EmpID</TableHead>
+								<TableHead>Email</TableHead>
+								<TableHead>Department</TableHead>
+								<TableHead>Programme</TableHead>
+								<TableHead>Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -81,6 +200,7 @@ function UsersTab() {
 									<TableCell>{u.employeeId}</TableCell>
 									<TableCell>{u.email}</TableCell>
 									<TableCell>{u.department}</TableCell>
+									<TableCell>{u.programme ? u.programme : '-'}</TableCell>
 									<TableCell className="space-x-2">
 										<Button variant="outline" size="sm" onClick={() => editUser(u)}>Edit</Button>
 										<Button variant="destructive" size="sm" onClick={() => remove(u.employeeId)}>Delete</Button>
@@ -339,6 +459,7 @@ function RegistrationsTab() {
 										<TableHead>AN</TableHead>
 										<TableHead>Total</TableHead>
 										<TableHead>Faculty School</TableHead>
+										<TableHead>Prerequisites</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -354,6 +475,7 @@ function RegistrationsTab() {
 											<TableCell>{e.anSlots}</TableCell>
 											<TableCell className="font-semibold">{e.totalSlots}</TableCell>
 											<TableCell>{e.facultySchool}</TableCell>
+											<TableCell>{Array.isArray(e.prerequisites) && e.prerequisites.length > 0 ? e.prerequisites.join(', ') : '-'}</TableCell>
 										</TableRow>
 									))}
 								</TableBody>
