@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     await db.collection('otps').insertOne(otpDoc);
 
     // Send OTP email
-    await sendOTPEmail(employee.email, otp, employee.employeeId);
+  await sendOTPEmail(employee.email, otp, employee.employeeId, employee.name);
 
     return NextResponse.json({
       success: true,

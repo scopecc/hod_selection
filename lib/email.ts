@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export async function sendOTPEmail(email: string, otp: string, employeeId: string) {
+export async function sendOTPEmail(email: string, otp: string, employeeId: string, employeeName: string) {
   const mailOptions = {
     from: process.env.EMAIL_FROM,
     to: email,
@@ -19,7 +19,7 @@ export async function sendOTPEmail(email: string, otp: string, employeeId: strin
           <h2 style="color: #333; text-align: center; margin-bottom: 30px;">Login Verification</h2>
           
           <p style="color: #666; font-size: 16px; line-height: 1.5;">
-            Hello Employee <strong>${employeeId}</strong>,
+            Hello <strong>${employeeName || ''} ${employeeId}</strong>,
           </p>
           
           <p style="color: #666; font-size: 16px; line-height: 1.5;">
