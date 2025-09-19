@@ -55,6 +55,8 @@ export default function RegistrationPage() {
 	const [fnSlots, setFnSlots] = useState<number | ''>('');
 	const [anSlots, setAnSlots] = useState<number | ''>('');
 	const [facultySchool, setFacultySchool] = useState('');
+	const [basket, setBasket] = useState('');
+	const [remarks, setRemarks] = useState('');
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [message, setMessage] = useState('');
@@ -100,6 +102,8 @@ export default function RegistrationPage() {
 		setFnSlots('');
 		setAnSlots('');
 		setFacultySchool('');
+		setBasket('');
+		setRemarks('');
 		setEditingIndex(null);
 		setPrerequisites([]);
 	};
@@ -109,21 +113,56 @@ export default function RegistrationPage() {
 		c.courseCode.toLowerCase().includes(prereqSearch.toLowerCase())
 	) || [];
 
+	// Helper to calculate L, T, P, J
+	// Strict calculation for L, T, P, J based on credits (C) and last character of course code
+	const calcLTPJ = (code: string, credits: number) => {
+		code = code.trim().toUpperCase();
+		let L = 0, T = 0, P = 0, J = 0;
+		const lastChar = code.length > 0 ? code[code.length - 1] : '';
+		if (lastChar === 'L') {
+			L = credits;
+			T = 0;
+			P = 0;
+			J = 0;
+		} else if (lastChar === 'J') {
+			J = credits * 4;
+			L = 0;
+			T = 0;
+			P = 0;
+		} else if (lastChar === 'P') {
+			P = credits * 2;
+			L = 0;
+			T = 0;
+			J = 0;
+		}
+		return { L, T, P, J };
+	};
 	const addEntry = () => {
-		if (!batch || !courseCode || !courseName || !credits || !studentStrength || !fnSlots || !anSlots || !facultySchool) return;
+		if (!batch || !courseCode || !courseName || credits === '' || isNaN(Number(credits)) || !studentStrength || !fnSlots || !anSlots || !facultySchool) return;
+		const toTitleCase = (str: string): string => str ? str.replace(/\w\S*/g, (txt: string) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()) : '';
 		const totalSlots = Number(fnSlots) + Number(anSlots);
+		const creditsNum = Number(credits);
+		console.log('DEBUG: Credits (C) before LTPJ calculation:', creditsNum);
+		const { L, T, P, J } = calcLTPJ(courseCode, creditsNum);
+		console.log('DEBUG: After LTPJ calculation:', { L, T, P, J });
 		const newEntry = {
-			courseCode,
-			courseName,
-			credits: Number(credits),
-			group,
+			courseCode: courseCode.trim().toUpperCase(),
+			courseName: toTitleCase(courseName),
+			credits: creditsNum,
+			group: toTitleCase(group),
 			studentStrength: Number(studentStrength),
 			fnSlots: Number(fnSlots),
 			anSlots: Number(anSlots),
 			totalSlots,
-			facultySchool,
-			batch,
-			prerequisites: [...prerequisites]
+			facultySchool: facultySchool.trim().toUpperCase(),
+			batch: toTitleCase(batch),
+			prerequisites: prerequisites.map(toTitleCase),
+			basket: toTitleCase(basket),
+			remarks: toTitleCase(remarks),
+			L,
+			T,
+			P,
+			J
 		};
 		if (editingIndex !== null) {
 			// Update existing entry
@@ -147,16 +186,35 @@ export default function RegistrationPage() {
 		setFnSlots(entry.fnSlots);
 		setAnSlots(entry.anSlots);
 		setFacultySchool(entry.facultySchool);
+		setBasket(entry.basket || '');
+		setRemarks(entry.remarks || '');
 		setBatch(entry.batch);
 		setEditingIndex(index);
 		setPrerequisites(entry.prerequisites || []);
 	};
 
-	const deleteEntry = (index: number) => {
+	const deleteEntry = async (index: number) => {
+		if (!window.confirm('Are you sure you want to delete this entry?')) return;
 		const newEntries = entries.filter((_, i) => i !== index);
 		setEntries(newEntries);
 		if (editingIndex === index) {
 			resetForm();
+		}
+		// Persist deletion to backend
+		if (selectedDraft) {
+			setLoading(true);
+			try {
+				await fetch('/api/user_drafts', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ draftId: selectedDraft, entries: newEntries })
+				});
+				mutateDraft();
+			} catch {
+				setMessage('Failed to delete entry from draft');
+			} finally {
+				setLoading(false);
+			}
 		}
 	};
 
@@ -237,250 +295,284 @@ export default function RegistrationPage() {
 	}, [selectedDraft, draftsData]);
 
 	// Faculty school options
-	const facultySchoolOptions = ['scope', 'smec', 'sense', 'select', 'vit-bs'];
+	const facultySchoolOptions = ['SCOPE', 'SMEC', 'SENSE', 'SELECT', 'VIT-BS'];
+	const basketOptions = ['Basket 1', 'Basket 2', 'Basket 3'];
 
 		return (
-			<div className="p-4 space-y-4">
-				{/* User Info Banner and Logout Button on same line */}
+			<div className="p-4 space-y-6 max-w-5xl mx-auto">
+				{/* Improved Welcome Banner */}
 				{user && (
-					<div className="mb-4 flex items-center justify-between p-3 rounded bg-blue-50 border border-blue-200">
-						<div className="flex items-center gap-4">
-							<span className="font-semibold text-blue-900">Welcome! {user.name}</span>
-							<span className="text-blue-700">Emp Id: ({user.id})</span>
+					<div className="mb-4 flex flex-col md:flex-row items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-100 to-blue-50 border border-blue-200 shadow-sm">
+						<div className="flex flex-col md:flex-row items-center gap-4">
+							<span className="font-bold text-lg text-blue-900">Welcome, {user.name}</span>
+							<span className="text-blue-700 text-sm">Emp ID: <span className="font-mono font-semibold">{user.id}</span></span>
 						</div>
-						<Button variant="outline" onClick={handleLogout}>
-							Logout
-						</Button>
+						<Button variant="outline" onClick={handleLogout} className="mt-2 md:mt-0">Logout</Button>
 					</div>
 				)}
 				{/* Message Display */}
 				{message && (
-					<div className={`p-3 rounded-lg ${message.includes('successfully') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
-						{message}
-					</div>
+					<div className={`p-3 rounded-lg text-center font-medium ${message.includes('successfully') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>{message}</div>
 				)}
 
-			<Card>
-				<CardHeader><CardTitle>Registration</CardTitle></CardHeader>
-				<CardContent className="grid grid-cols-1 md:grid-cols-1 gap-3">
-					<select className="border rounded p-2" value={selectedDraft} onChange={e => { setSelectedDraft(e.target.value); setBatch(''); setEntries([]); }}>
-						<option value="">Select Draft</option>
-						{draftsData?.drafts?.map((d: any) => <option key={d._id} value={d._id}>{d.name} ({new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()})</option>)}
-					</select>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader><CardTitle>{editingIndex !== null ? 'Edit Course' : 'Add Course'}</CardTitle></CardHeader>
-				<CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
-					<select className="border rounded p-2" value={batch} onChange={e => setBatch(e.target.value)} disabled={!selectedDraft}>
-						<option value="">Select Batch</option>
-						{yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
-					</select>
-														{/* Searchable Listbox for Course Name, styled to match input/select */}
-														{(() => {
-															const [search, setSearch] = useState('');
-															const filteredCourses = coursesData?.courses?.filter((c: any) =>
-																c.courseName.toLowerCase().includes(search.toLowerCase())
-															) || [];
-															// Find selected course for display
-															const selectedCourse = coursesData?.courses?.find((c: any) => c.courseCode === courseCode);
-															return (
-																<div className="relative w-full">
-																	<Listbox value={courseCode} onChange={setCourseCode} disabled={!coursesData?.courses?.length}>
-																		<div className="relative">
-																			<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-																				<span className="truncate text-left">
-																					{selectedCourse ? `${selectedCourse.courseName} (${selectedCourse.courseCode})` : 'Select Course'}
-																				</span>
-																				<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-																			</Listbox.Button>
-																			<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
-																				<div className="sticky top-0 bg-white dark:bg-zinc-900 px-2 py-2">
-																					<input
-																						type="text"
-																						className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-																						placeholder="Search course name..."
-																						value={search}
-																						onChange={e => setSearch(e.target.value)}
-																						autoFocus
-																					/>
-																				</div>
-																				{filteredCourses.length ? (
-																					filteredCourses.map((c: any) => (
-																						<Listbox.Option
-																							key={c.courseCode}
-																							value={c.courseCode}
-																							className={(
-																								{ active, selected }: { active: boolean; selected: boolean }
-																							) =>
-																								`cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`
-																							}
-																						>
-																							{c.courseName} <span className="text-xs text-zinc-400">({c.courseCode})</span>
-																						</Listbox.Option>
-																					))
-																				) : (
-																					<div className="px-3 py-2 text-zinc-400">No courses found</div>
-																				)}
-																			</Listbox.Options>
-																		</div>
-																	</Listbox>
-																</div>
-															);
-														})()}
-					<Input placeholder="Course Name" value={courseName} readOnly />
-					<Input placeholder="Credits" value={credits} readOnly />
-					<Input placeholder="Total Student Strength" value={studentStrength} onChange={e => setStudentStrength(Number(e.target.value) || '')} />
-					<Input placeholder="Group" value={group} readOnly />
-					<Input placeholder="FN Slots" value={fnSlots} onChange={e => setFnSlots(Number(e.target.value) || '')} />
-					<Input placeholder="AN Slots" value={anSlots} onChange={e => setAnSlots(Number(e.target.value) || '')} />
-					<Input placeholder="Total Slots" value={(Number(fnSlots || 0) + Number(anSlots || 0)) || ''} readOnly />
-					<select className="border rounded p-2" value={facultySchool} onChange={e => setFacultySchool(e.target.value)}>
-						<option value="">Select Faculty School</option>
-						{facultySchoolOptions.map(option => <option key={option} value={option}>{option.toUpperCase()}</option>)}
-					</select>
-					{/* Prerequisites Multi-Select Listbox */}
-					<div className="relative w-full md:col-span-4">
-						<label className="block mb-1 text-sm font-medium">Prerequisites</label>
-						<Listbox value={prerequisites} onChange={setPrerequisites} multiple>
-							<div className="relative">
-								<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-									<span className="truncate text-left">
-										{prerequisites.length === 0 ? 'Select prerequisites' : prerequisites.map(code => {
-											const c = coursesData?.courses?.find((c: any) => c.courseCode === code);
-											return c ? `${c.courseName} (${c.courseCode})` : code;
-										}).join(', ')}
-									</span>
-									<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-								</Listbox.Button>
-								<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
-									<div className="sticky top-0 bg-white dark:bg-zinc-900 px-2 py-2">
-										<input
-											type="text"
-											className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-											placeholder="Search course name/code..."
-											value={prereqSearch}
-											onChange={e => setPrereqSearch(e.target.value)}
-											autoFocus
-										/>
-									</div>
-									{filteredCourses.length ? (
-										filteredCourses.map((c: any) => (
-											<Listbox.Option
-												key={c.courseCode}
-												value={c.courseCode}
-												className={({ active, selected }: { active: boolean; selected: boolean }) =>
-													`cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`
-												}
-											>
-												{c.courseName} <span className="text-xs text-zinc-400">({c.courseCode})</span>
-												{prerequisites.includes(c.courseCode) && <span className="ml-2 text-green-500">✓</span>}
-											</Listbox.Option>
-										))
-									) : (
-										<div className="px-3 py-2 text-zinc-400">No courses found</div>
-									)}
-								</Listbox.Options>
-							</div>
-						</Listbox>
-						{/* Show selected prerequisites as removable chips */}
-						<div className="flex flex-wrap gap-2 mt-2">
-							{prerequisites.map(code => {
-								const c = coursesData?.courses?.find((c: any) => c.courseCode === code);
-								return (
-									<span key={code} className="inline-flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 text-xs">
-										{c ? `${c.courseName} (${c.courseCode})` : code}
-										<button type="button" className="ml-1 text-red-500 hover:text-red-700" onClick={() => setPrerequisites(prerequisites.filter(p => p !== code))}>&times;</button>
-									</span>
-								);
-							})}
-						</div>
-					</div>
-					<div className="md:col-span-4 flex gap-2">
-						<Button 
-							onClick={addEntry} 
-							disabled={!batch || !courseCode || !courseName || !credits || !studentStrength || !fnSlots || !anSlots || !facultySchool}
-							className="flex-1"
-						>
-							{editingIndex !== null ? <Edit className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-							{editingIndex !== null ? 'Update Course' : 'Add Course'}
-						</Button>
-						{editingIndex !== null && (
-							<Button variant="outline" onClick={resetForm}>
-								<X className="h-4 w-4 mr-2" />
-								Cancel
-							</Button>
-						)}
-					</div>
-				</CardContent>
-			</Card>
-
-			{entries.length > 0 && (
 				<Card>
-					<CardHeader><CardTitle>Entries ({entries.length})</CardTitle></CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Batch</TableHead>
-									<TableHead>Code</TableHead>
-									<TableHead>Name</TableHead>
-									<TableHead>Credits</TableHead>
-									<TableHead>Strength</TableHead>
-									<TableHead>Group</TableHead>
-									<TableHead>FN</TableHead>
-									<TableHead>AN</TableHead>
-									<TableHead>Total</TableHead>
-									<TableHead>Faculty School</TableHead>
-									<TableHead>Prerequisites</TableHead>
-									<TableHead>Actions</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{sortedEntries.map((e, idx) => (
-									<TableRow key={idx}>
-										<TableCell className="font-medium">{e.batch}</TableCell>
-										<TableCell className="font-mono text-sm">{e.courseCode}</TableCell>
-										<TableCell>{e.courseName}</TableCell>
-										<TableCell>{e.credits}</TableCell>
-										<TableCell>{e.studentStrength}</TableCell>
-										<TableCell>{e.group}</TableCell>
-										<TableCell>{e.fnSlots}</TableCell>
-										<TableCell>{e.anSlots}</TableCell>
-										<TableCell className="font-semibold">{e.totalSlots}</TableCell>
-										<TableCell>{e.facultySchool}</TableCell>
-										{/* Prerequisites column: show only course codes */}
-										<TableCell>{Array.isArray(e.prerequisites) && e.prerequisites.length > 0 ? e.prerequisites.join(', ') : '-'}</TableCell>
-										<TableCell className="space-x-2">
-											<Button variant="outline" size="sm" onClick={() => editEntry(idx)}>
-												<Edit className="h-3 w-3 mr-1" />
-												Edit
-											</Button>
-											<Button variant="destructive" size="sm" onClick={() => deleteEntry(idx)}>
-												<Trash2 className="h-3 w-3 mr-1" />
-												Delete
-											</Button>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-						<div className="flex gap-2 mt-4">
-							<Button onClick={saveDraft} disabled={loading} variant="outline">
-								<Save className="h-4 w-4 mr-2" />
-								{loading ? 'Saving...' : 'Save Draft'}
-							</Button>
-							<Button onClick={submit} disabled={loading}>
-								<Send className="h-4 w-4 mr-2" />
-								{loading ? 'Submitting...' : 'Submit'}
-							</Button>
+					<CardHeader><CardTitle>Registration</CardTitle></CardHeader>
+					<CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+						{/* Draft Select - Listbox */}
+						<div className="relative w-full">
+							<label className="block mb-1 text-sm font-medium">Select Draft</label>
+							<Listbox value={selectedDraft} onChange={val => { setSelectedDraft(val); setBatch(''); setEntries([]); }}>
+								<div className="relative">
+									<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+										<span className="truncate text-left">
+											{selectedDraft ? (draftsData?.drafts?.find((d: any) => d._id === selectedDraft)?.name || 'Draft Selected') : 'Select Draft'}
+										</span>
+										<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+									</Listbox.Button>
+									<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+										{draftsData?.drafts?.map((d: any) => (
+											<Listbox.Option key={d._id} value={d._id} className={({ active, selected }: { active: boolean; selected: boolean }) => `cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`}>{d.name} ({new Date(d.yearStart).getFullYear()}-{new Date(d.yearEnd).getFullYear()})</Listbox.Option>
+										))}
+									</Listbox.Options>
+								</div>
+							</Listbox>
+						</div>
+						{/* Batch Select - Listbox */}
+						<div className="relative w-full">
+							<label className="block mb-1 text-sm font-medium">Select Batch (Year Of Admission)</label>
+							<Listbox value={batch} onChange={setBatch} disabled={!selectedDraft}>
+								<div className="relative">
+									<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+										<span className="truncate text-left">{batch || 'Select Batch'}</span>
+										<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+									</Listbox.Button>
+									<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+										{yearOptions.map(year => (
+											<Listbox.Option key={year} value={year} className={({ active, selected }: { active: boolean; selected: boolean }) => `cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`}>{year}</Listbox.Option>
+										))}
+									</Listbox.Options>
+								</div>
+							</Listbox>
 						</div>
 					</CardContent>
 				</Card>
-			)}
-		</div>
-	);
+
+				<Card>
+					<CardHeader><CardTitle>{editingIndex !== null ? 'Edit Course' : 'Add Course'}</CardTitle></CardHeader>
+					<CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+						{/* Course Select - Listbox */}
+						<div className="relative w-full">
+							<label className="block mb-1 text-sm font-medium">Select Course</label>
+							{(() => {
+								const [search, setSearch] = useState('');
+								const filteredCourses = coursesData?.courses?.filter((c: any) =>
+									c.courseName.toLowerCase().includes(search.toLowerCase()) || c.courseCode.toLowerCase().includes(search.toLowerCase())
+								) || [];
+								const selectedCourse = coursesData?.courses?.find((c: any) => c.courseCode === courseCode);
+								return (
+									<div className="relative w-full">
+										<Listbox value={courseCode} onChange={setCourseCode} disabled={!coursesData?.courses?.length}>
+											<div className="relative">
+												<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+													<span className="truncate text-left">{selectedCourse ? `${selectedCourse.courseName} (${selectedCourse.courseCode})` : 'Select Course'}</span>
+													<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+												</Listbox.Button>
+												<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+													<div className="sticky top-0 bg-white dark:bg-zinc-900 px-2 py-2">
+														<input type="text" className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" placeholder="Search course name/code..." value={search} onChange={e => setSearch(e.target.value)} autoFocus />
+													</div>
+													{filteredCourses.length ? (
+														filteredCourses.map((c: any) => (
+															<Listbox.Option key={c.courseCode} value={c.courseCode} className={({ active, selected }: { active: boolean; selected: boolean }) => `cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`}>{c.courseName} <span className="text-xs text-zinc-400">({c.courseCode})</span></Listbox.Option>
+														))
+													) : (
+														<div className="px-3 py-2 text-zinc-400">No courses found</div>
+													)}
+												</Listbox.Options>
+											</div>
+										</Listbox>
+									</div>
+								);
+							})()}
+						</div>
+						<div className="flex flex-col gap-2">
+							<label className="block mb-1 text-sm font-medium">Course Name</label>
+							<Input placeholder="Course Name" value={courseName} readOnly />
+						</div>
+						<div className="flex flex-col gap-2">
+							<label className="block mb-1 text-sm font-medium">Credits</label>
+							<Input placeholder="Credits" value={credits} readOnly />
+						</div>
+						{/* ...removed L T P J live preview from add course section... */}
+						<div className="flex flex-col gap-2">
+							<label className="block mb-1 text-sm font-medium">Total Student Strength</label>
+							<Input placeholder="Total Student Strength" value={studentStrength} onChange={e => setStudentStrength(Number(e.target.value) || '')} />
+						</div>
+						<div className="flex flex-col gap-2">
+							<label className="block mb-1 text-sm font-medium">Course Category (UG, OE, PC, PE)</label>
+							<Input placeholder="Course Category" value={group} readOnly />
+						</div>
+						<div className="flex flex-col gap-2">
+							<label className="block mb-1 text-sm font-medium">FN Slots</label>
+							<Input placeholder="FN Slots" value={fnSlots} onChange={e => setFnSlots(Number(e.target.value) || '')} />
+						</div>
+						<div className="flex flex-col gap-2">
+							<label className="block mb-1 text-sm font-medium">AN Slots</label>
+							<Input placeholder="AN Slots" value={anSlots} onChange={e => setAnSlots(Number(e.target.value) || '')} />
+						</div>
+						<div className="flex flex-col gap-2">
+							<label className="block mb-1 text-sm font-medium">Total Slots</label>
+							<Input placeholder="Total Slots" value={(Number(fnSlots || 0) + Number(anSlots || 0)) || ''} readOnly />
+						</div>
+						{/* Faculty School Listbox */}
+						<div className="relative w-full">
+							<label className="block mb-1 text-sm font-medium">Course Handling School</label>
+							<Listbox value={facultySchool} onChange={setFacultySchool}>
+								<div className="relative">
+									<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+										<span className="truncate text-left">{facultySchool ? facultySchool.toUpperCase() : 'Select Faculty School'}</span>
+										<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+									</Listbox.Button>
+									<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+										{facultySchoolOptions.map(option => (
+											<Listbox.Option key={option} value={option} className={({ active, selected }: { active: boolean; selected: boolean }) => `cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`}>{option.toUpperCase()}</Listbox.Option>
+										))}
+									</Listbox.Options>
+								</div>
+							</Listbox>
+						</div>
+						{/* Basket Listbox */}
+						<div className="relative w-full">
+							<label className="block mb-1 text-sm font-medium">Basket</label>
+							<Listbox value={basket} onChange={setBasket}>
+								<div className="relative">
+									<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+										<span className="truncate text-left">{basket || 'Select Basket'}</span>
+										<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+									</Listbox.Button>
+									<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+										<Listbox.Option value="" className={({ active, selected }: { active: boolean; selected: boolean }) => `cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-red-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-red-700 dark:text-red-300' : ''}`}>None</Listbox.Option>
+										{basketOptions.map(option => (
+											<Listbox.Option key={option} value={option} className={({ active, selected }: { active: boolean; selected: boolean }) => `cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`}>{option}</Listbox.Option>
+										))}
+									</Listbox.Options>
+								</div>
+							</Listbox>
+						</div>
+						{/* Remarks Field */}
+						<div className="relative w-full">
+							<label className="block mb-1 text-sm font-medium">Remarks</label>
+							<Input placeholder="Enter remarks..." value={remarks} onChange={e => setRemarks(e.target.value)} />
+						</div>
+						{/* Prerequisites Multi-Select Listbox */}
+						<div className="relative w-full md:col-span-3">
+							<label className="block mb-1 text-sm font-medium">Pre-requisites</label>
+							<Listbox value={prerequisites} onChange={setPrerequisites} multiple>
+								<div className="relative">
+									<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+										<span className="truncate text-left">{prerequisites.length === 0 ? 'Select prerequisites' : prerequisites.map(code => {
+											const c = coursesData?.courses?.find((c: any) => c.courseCode === code);
+											return c ? `${c.courseName} (${c.courseCode})` : code;
+										}).join(', ')}</span>
+										<svg className="w-4 h-4 ml-2 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+									</Listbox.Button>
+									<Listbox.Options className="absolute mt-1 w-full bg-white dark:bg-zinc-900 shadow-lg rounded-md border border-input max-h-60 overflow-auto z-10">
+										<div className="sticky top-0 bg-white dark:bg-zinc-900 px-2 py-2">
+											<input type="text" className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" placeholder="Search course name/code..." value={prereqSearch} onChange={e => setPrereqSearch(e.target.value)} autoFocus />
+										</div>
+										{filteredCourses.length ? (
+											filteredCourses.map((c: any) => (
+												<Listbox.Option key={c.courseCode} value={c.courseCode} className={({ active, selected }: { active: boolean; selected: boolean }) => `cursor-pointer rounded-md px-3 py-2 mx-1 my-1 ${active ? 'bg-blue-100 dark:bg-zinc-800' : ''} ${selected ? 'font-semibold text-blue-700 dark:text-blue-300' : ''}`}>{c.courseName} <span className="text-xs text-zinc-400">({c.courseCode})</span>{prerequisites.includes(c.courseCode) && <span className="ml-2 text-green-500">✓</span>}</Listbox.Option>
+											))
+										) : (
+											<div className="px-3 py-2 text-zinc-400">No courses found</div>
+										)}
+									</Listbox.Options>
+								</div>
+							</Listbox>
+							{/* Show selected prerequisites as removable chips */}
+							<div className="flex flex-wrap gap-2 mt-2">
+								{prerequisites.map(code => {
+									const c = coursesData?.courses?.find((c: any) => c.courseCode === code);
+									return (
+										<span key={code} className="inline-flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 text-xs">{c ? `${c.courseName} (${c.courseCode})` : code}<button type="button" className="ml-1 text-red-500 hover:text-red-700" onClick={() => setPrerequisites(prerequisites.filter(p => p !== code))}>&times;</button></span>
+									);
+								})}
+							</div>
+						</div>
+						<div className="md:col-span-3 flex gap-2 mt-4">
+							<Button onClick={addEntry} disabled={!batch || !courseCode || !courseName || !credits || !studentStrength || !fnSlots || !anSlots || !facultySchool} className="flex-1">{editingIndex !== null ? <Edit className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}{editingIndex !== null ? 'Update Course' : 'Add Course'}</Button>
+							{editingIndex !== null && (<Button variant="outline" onClick={resetForm}><X className="h-4 w-4 mr-2" />Cancel</Button>)}
+						</div>
+					</CardContent>
+				</Card>
+
+				{entries.length > 0 && (
+					<Card>
+						<CardHeader><CardTitle>Entries ({entries.length})</CardTitle></CardHeader>
+						<CardContent>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Batch</TableHead>
+										<TableHead>Course Category</TableHead>
+										<TableHead>Code</TableHead>
+										<TableHead>Name</TableHead>
+										<TableHead>L</TableHead>
+										<TableHead>T</TableHead>
+										<TableHead>P</TableHead>
+										<TableHead>J</TableHead>
+										<TableHead>C</TableHead>
+										<TableHead>Strength</TableHead>
+										<TableHead>FN</TableHead>
+										<TableHead>AN</TableHead>
+										<TableHead>Total</TableHead>
+										<TableHead>Faculty School</TableHead>
+										<TableHead>Basket</TableHead>
+										<TableHead>Remarks</TableHead>
+										<TableHead>Prerequisites</TableHead>
+										<TableHead>Student Strength/Slot</TableHead>
+										<TableHead>Actions</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{sortedEntries.map((e, idx) => (
+										<TableRow key={idx}>
+											<TableCell className="font-medium">{e.batch}</TableCell>
+											<TableCell>{e.group}</TableCell>
+											<TableCell className="font-mono text-sm">{e.courseCode}</TableCell>
+											<TableCell>{e.courseName}</TableCell>
+											<TableCell>{typeof e.L !== 'undefined' ? e.L : '-'}</TableCell>
+											<TableCell>{typeof e.T !== 'undefined' ? e.T : '-'}</TableCell>
+											<TableCell>{typeof e.P !== 'undefined' ? e.P : '-'}</TableCell>
+											<TableCell>{typeof e.J !== 'undefined' ? e.J : '-'}</TableCell>
+											<TableCell>{e.credits}</TableCell>
+											<TableCell>{e.studentStrength}</TableCell>
+											<TableCell>{e.fnSlots}</TableCell>
+											<TableCell>{e.anSlots}</TableCell>
+											<TableCell className="font-semibold">{e.totalSlots}</TableCell>
+											<TableCell>{e.facultySchool}</TableCell>
+											<TableCell>{e.basket}</TableCell>
+											<TableCell>{e.remarks}</TableCell>
+											<TableCell>{Array.isArray(e.prerequisites) && e.prerequisites.length > 0 ? e.prerequisites.join(', ') : '-'}</TableCell>
+											<TableCell>{e.totalSlots ? Math.round(Number(e.studentStrength) / Number(e.totalSlots)) : '-'}</TableCell>
+											<TableCell className="space-x-2">
+												<Button variant="outline" size="sm" onClick={() => editEntry(idx)}><Edit className="h-3 w-3 mr-1" />Edit</Button>
+												<Button variant="destructive" size="sm" onClick={() => deleteEntry(idx)}><Trash2 className="h-3 w-3 mr-1" />Delete</Button>
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+							<div className="flex gap-2 mt-4">
+								<Button onClick={saveDraft} disabled={loading} variant="outline"><Save className="h-4 w-4 mr-2" />{loading ? 'Saving...' : 'Save Draft'}</Button>
+								<Button onClick={submit} disabled={loading}><Send className="h-4 w-4 mr-2" />{loading ? 'Submitting...' : 'Submit'}</Button>
+							</div>
+						</CardContent>
+					</Card>
+				)}
+			</div>
+		);
 }
 
 

@@ -48,8 +48,17 @@ function UsersTab() {
 
 	const submit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		// Title case helper
+		const toTitleCase = (str: string): string => str ? str.replace(/\w\S*/g, (txt: string) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()) : '';
 		// Ensure programme is included in payload
-		const payload = { ...form };
+		const payload = {
+			...form,
+			name: toTitleCase(form.name),
+			employeeId: toTitleCase(form.employeeId),
+			email: form.email,
+			department: form.department.trim().toUpperCase(),
+			programme: form.programme
+		};
 		if (!payload.programme) {
 			payload.programme = '';
 		}
@@ -241,8 +250,10 @@ function DraftsTab() {
 		mutate();
 	};
 	const remove = async (id: string) => {
-		await fetch(`/api/admin/drafts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-		mutate();
+		if (window.confirm('Are you sure you want to delete this draft?')) {
+			await fetch(`/api/admin/drafts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+			mutate();
+		}
 	};
 	return (
 		<div className="space-y-4">
@@ -386,6 +397,32 @@ function RegistrationsTab() {
 		}
 	};
 
+	// Delete user registration with confirmation
+	const deleteUserRegistration = async (userId: string) => {
+		if (!selectedDraft || !userId) return;
+		if (!window.confirm('Are you sure you want to delete all registrations for this user?')) return;
+		try {
+			await fetch(`/api/admin/registrations?draftId=${encodeURIComponent(selectedDraft)}&userId=${encodeURIComponent(userId)}`, {
+				method: 'DELETE',
+			});
+			mutate();
+		} catch {
+			alert('Failed to delete user registration');
+		}
+	};
+	// Delete individual entry for a user
+	const deleteUserEntry = async (userId: string, entryIdx: number) => {
+		if (!selectedDraft || !userId) return;
+		if (!window.confirm('Are you sure you want to delete this course entry for this user?')) return;
+		try {
+			await fetch(`/api/admin/registrations?draftId=${encodeURIComponent(selectedDraft)}&userId=${encodeURIComponent(userId)}&entryIdx=${entryIdx}`, {
+				method: 'DELETE',
+			});
+			mutate();
+		} catch {
+			alert('Failed to delete course entry');
+		}
+	};
 	// Group registrations by user
 	const userWiseRegistrations = useMemo(() => {
 		if (!data?.registrations) return [];
@@ -442,6 +479,9 @@ function RegistrationsTab() {
 									<Button variant="ghost" size="sm" onClick={() => downloadUserRegistration(user.userId, user.userName, user.department)} title="Download Excel">
 										<Download className="h-4 w-4" />
 									</Button>
+									<Button variant="destructive" size="sm" onClick={() => deleteUserRegistration(user.userId)} title="Delete User Registration">
+										Delete
+									</Button>
 								</span>
 							</CardTitle>
 						</CardHeader>
@@ -452,6 +492,10 @@ function RegistrationsTab() {
 										<TableHead>Batch</TableHead>
 										<TableHead>Code</TableHead>
 										<TableHead>Name</TableHead>
+										<TableHead>L</TableHead>
+										<TableHead>T</TableHead>
+										<TableHead>P</TableHead>
+										<TableHead>J</TableHead>
 										<TableHead>Credits</TableHead>
 										<TableHead>Strength</TableHead>
 										<TableHead>Group</TableHead>
@@ -468,6 +512,10 @@ function RegistrationsTab() {
 											<TableCell className="font-medium">{e.batch}</TableCell>
 											<TableCell className="font-mono text-sm">{e.courseCode}</TableCell>
 											<TableCell>{e.courseName}</TableCell>
+											<TableCell>{e.L ?? '-'}</TableCell>
+											<TableCell>{e.T ?? '-'}</TableCell>
+											<TableCell>{e.P ?? '-'}</TableCell>
+											<TableCell>{e.J ?? '-'}</TableCell>
 											<TableCell>{e.credits}</TableCell>
 											<TableCell>{e.studentStrength}</TableCell>
 											<TableCell>{e.group}</TableCell>
@@ -476,6 +524,9 @@ function RegistrationsTab() {
 											<TableCell className="font-semibold">{e.totalSlots}</TableCell>
 											<TableCell>{e.facultySchool}</TableCell>
 											<TableCell>{Array.isArray(e.prerequisites) && e.prerequisites.length > 0 ? e.prerequisites.join(', ') : '-'}</TableCell>
+											<TableCell>
+												<Button variant="destructive" size="sm" onClick={() => deleteUserEntry(user.userId, idx)} title="Delete Course Entry">Delete</Button>
+											</TableCell>
 										</TableRow>
 									))}
 								</TableBody>

@@ -34,10 +34,29 @@ export async function POST(req: Request) {
 	const normalizedEntries = entries.map((e: any) => {
 		const fnSlots = Number(e.fnSlots || 0);
 		const anSlots = Number(e.anSlots || 0);
+		const creditsNum = Number(e.credits || 0);
+		const code = String(e.courseCode || '').trim().toUpperCase();
+		let L = 0, T = 0, P = 0, J = 0;
+		if (code.endsWith('L')) {
+			L = creditsNum;
+			T = 0;
+			P = 0;
+			J = 0;
+		} else if (code.endsWith('J')) {
+			J = creditsNum * 4;
+			L = 0;
+			T = 0;
+			P = 0;
+		} else if (code.endsWith('P')) {
+			P = creditsNum * 2;
+			L = 0;
+			T = 0;
+			J = 0;
+		}
 		return {
 			courseCode: String(e.courseCode || ''),
 			courseName: String(e.courseName || ''),
-			credits: Number(e.credits || 0),
+			credits: creditsNum,
 			group: String(e.group || ''),
 			studentStrength: Number(e.studentStrength || 0),
 			fnSlots,
@@ -45,7 +64,13 @@ export async function POST(req: Request) {
 			totalSlots: fnSlots + anSlots,
 			facultySchool: String(e.facultySchool || ''),
 			batch: String(e.batch || ''),
-			prerequisites: Array.isArray(e.prerequisites) ? e.prerequisites.map(String) : []
+			prerequisites: Array.isArray(e.prerequisites) ? e.prerequisites.map(String) : [],
+			basket: String(e.basket || ''),
+			remarks: String(e.remarks || ''),
+			L,
+			T,
+			P,
+			J
 		};
 	});
 

@@ -29,25 +29,79 @@ export async function POST(req: Request) {
 
 		// Prepare data for Excel
 		const excelData: any[] = [];
+		const isGlobal = !userId;
 		registrations.forEach((reg, regIdx) => {
 			reg.entries.forEach((entry: any, entryIdx: number) => {
-				excelData.push({
-					'SNO.': excelData.length + 1,
-					'Department': reg.department || '',
-					'Batch': entry.batch,
+				// Calculate L, T, P, J if not present
+				let L = entry.L ?? 0, T = entry.T ?? 0, P = entry.P ?? 0, J = entry.J ?? 0;
+				const code = String(entry.courseCode || '').trim().toUpperCase();
+				const creditsNum = Number(entry.credits || 0);
+				if (L === 0 && T === 0 && P === 0 && J === 0) {
+					if (code.endsWith('L')) {
+						L = creditsNum;
+						T = 0;
+						P = 0;
+						J = 0;
+					} else if (code.endsWith('J')) {
+						J = creditsNum * 4;
+						L = 0;
+						T = 0;
+						P = 0;
+					} else if (code.endsWith('P')) {
+						P = creditsNum * 2;
+						L = 0;
+						T = 0;
+						J = 0;
+					}
+				}
+				const row: any = isGlobal ? {
+					'S.No.': excelData.length + 1,
+					'Username': reg.userName || '',
+					'User ID': reg.userId || '',
+					'Year of admission (Batch)': entry.batch,
+					'Course Category': entry.group || '',
 					'Course Code': entry.courseCode,
-					'Course Name': entry.courseName,
-					'Credits': entry.credits,
-					'Group': entry.group || '',
-					'Student Strength': entry.studentStrength,
-					'FN Slots': entry.fnSlots,
-					'AN Slots': entry.anSlots,
-					'Total Slots': entry.totalSlots,
-					'Faculty School': entry.facultySchool,
-					'Prerequisites': Array.isArray(entry.prerequisites) && entry.prerequisites.length > 0 ? entry.prerequisites.join(', ') : '',
+					'Course Title': entry.courseName,
+					'L': L,
+					'T': T,
+					'P': P,
+					'J': J,
+					'C (credits)': entry.credits,
+					'Pre-requisites': Array.isArray(entry.prerequisites) && entry.prerequisites.length > 0 ? entry.prerequisites.join(', ') : '',
+					'Course Handling School': entry.facultySchool,
+					'No. of FN Slot': entry.fnSlots,
+					'No. of AN Slot': entry.anSlots,
+					'Total Number of Slots': entry.totalSlots,
+					'Student Strength per Slot': entry.totalSlots ? Math.round(Number(entry.studentStrength) / Number(entry.totalSlots)) : '',
+					'Total Strength': entry.studentStrength,
+					'Basket': entry.basket || '',
+					'Remarks': entry.remarks || '',
 					'Status': reg.status,
 					'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleString() : ''
-				});
+				} : {
+					'S.No.': excelData.length + 1,
+					'Year of admission (Batch)': entry.batch,
+					'Course Category': entry.group || '',
+					'Course Code': entry.courseCode,
+					'Course Title': entry.courseName,
+					'L': L,
+					'T': T,
+					'P': P,
+					'J': J,
+					'C (credits)': entry.credits,
+					'Pre-requisites': Array.isArray(entry.prerequisites) && entry.prerequisites.length > 0 ? entry.prerequisites.join(', ') : '',
+					'Course Handling School': entry.facultySchool,
+					'No. of FN Slot': entry.fnSlots,
+					'No. of AN Slot': entry.anSlots,
+					'Total Number of Slots': entry.totalSlots,
+					'Student Strength per Slot': entry.totalSlots ? Math.round(Number(entry.studentStrength) / Number(entry.totalSlots)) : '',
+					'Total Strength': entry.studentStrength,
+					'Basket': entry.basket || '',
+					'Remarks': entry.remarks || '',
+					'Status': reg.status,
+					'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleString() : ''
+				};
+				excelData.push(row);
 			});
 		});
 
