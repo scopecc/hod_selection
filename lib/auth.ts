@@ -33,6 +33,7 @@ export const authOptions: NextAuthOptions = {
             email: employee.email,
             name: employee.name,
             department: employee.department,
+            programme: employee.programme,
           };
         } catch (error) {
           console.error('Employee ID authorization error:', error);
@@ -113,6 +114,7 @@ export const authOptions: NextAuthOptions = {
             email: employee.email,
             name: employee.name,
             department: employee.department,
+            programme: employee.programme,
           };
         } catch (error) {
           console.error('OTP verification error:', error);
@@ -131,8 +133,8 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.department = user.department;
+        // Copy all fields from user object to token
+        Object.assign(token, user);
         // Default role to 'user' unless provided
         // @ts-ignore
         token.role = (user as any).role || 'user';
@@ -143,6 +145,7 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id as string;
         session.user.department = token.department as string;
+        session.user.programme = token.programme as string;
         // @ts-ignore
         session.user.role = (token as any).role as string | undefined;
       }

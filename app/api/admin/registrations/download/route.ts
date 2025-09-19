@@ -54,6 +54,9 @@ export async function POST(req: Request) {
 						J = 0;
 					}
 				}
+				const studentStrengthPerSlot = typeof entry.studentsPerSlot !== 'undefined' && entry.studentsPerSlot !== null
+					? entry.studentsPerSlot
+					: (entry.totalSlots ? Math.round(Number(entry.studentStrength) / Number(entry.totalSlots)) : '');
 				const row: any = isGlobal ? {
 					'S.No.': excelData.length + 1,
 					'Username': reg.userName || '',
@@ -72,7 +75,7 @@ export async function POST(req: Request) {
 					'No. of FN Slot': entry.fnSlots,
 					'No. of AN Slot': entry.anSlots,
 					'Total Number of Slots': entry.totalSlots,
-					'Student Strength per Slot': entry.totalSlots ? Math.round(Number(entry.studentStrength) / Number(entry.totalSlots)) : '',
+					'Student Strength per Slot': studentStrengthPerSlot,
 					'Total Strength': entry.studentStrength,
 					'Basket': entry.basket || '',
 					'Remarks': entry.remarks || '',
@@ -94,7 +97,7 @@ export async function POST(req: Request) {
 					'No. of FN Slot': entry.fnSlots,
 					'No. of AN Slot': entry.anSlots,
 					'Total Number of Slots': entry.totalSlots,
-					'Student Strength per Slot': entry.totalSlots ? Math.round(Number(entry.studentStrength) / Number(entry.totalSlots)) : '',
+					'Student Strength per Slot': studentStrengthPerSlot,
 					'Total Strength': entry.studentStrength,
 					'Basket': entry.basket || '',
 					'Remarks': entry.remarks || '',

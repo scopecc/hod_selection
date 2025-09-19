@@ -32,7 +32,7 @@ export default function RegistrationPage() {
 	}, []);
 	const router = useRouter();
 	const { data: draftsData } = useSWR('/api/drafts', fetcher);
-	const [user, setUser] = useState<{ name?: string; id?: string } | null>(null);
+	const [user, setUser] = useState<{ name?: string; id?: string; programme?: string; department?: string } | null>(null);
 	useEffect(() => {
 		fetch('/api/auth/session').then(res => res.json()).then(data => {
 			setUser(data?.user || null);
@@ -57,6 +57,7 @@ export default function RegistrationPage() {
 	const [facultySchool, setFacultySchool] = useState('');
 	const [basket, setBasket] = useState('');
 	const [remarks, setRemarks] = useState('');
+	const [studentsPerSlot, setStudentsPerSlot] = useState<number | ''>('');
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [message, setMessage] = useState('');
@@ -76,10 +77,10 @@ export default function RegistrationPage() {
 	useEffect(() => {
 		if (userDraft?.draft) {
 			setEntries(userDraft.draft.entries || []);
-			setBatch('');
+			// Do not reset batch here, keep user's selection
 		} else {
 			setEntries([]);
-			setBatch('');
+			// Do not reset batch here, keep user's selection
 		}
 	}, [userDraft]);
 
@@ -104,6 +105,7 @@ export default function RegistrationPage() {
 		setFacultySchool('');
 		setBasket('');
 		setRemarks('');
+		setStudentsPerSlot('');
 		setEditingIndex(null);
 		setPrerequisites([]);
 	};
@@ -138,7 +140,7 @@ export default function RegistrationPage() {
 		return { L, T, P, J };
 	};
 	const addEntry = () => {
-		if (!batch || !courseCode || !courseName || credits === '' || isNaN(Number(credits)) || !studentStrength || !fnSlots || !anSlots || !facultySchool) return;
+		if (!batch || !courseCode || !courseName || credits === '' || isNaN(Number(credits)) || !studentStrength || !fnSlots || !anSlots || !facultySchool || studentsPerSlot === '') return;
 		const toTitleCase = (str: string): string => str ? str.replace(/\w\S*/g, (txt: string) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()) : '';
 		const totalSlots = Number(fnSlots) + Number(anSlots);
 		const creditsNum = Number(credits);
@@ -154,6 +156,7 @@ export default function RegistrationPage() {
 			fnSlots: Number(fnSlots),
 			anSlots: Number(anSlots),
 			totalSlots,
+			studentsPerSlot: Number(studentsPerSlot),
 			facultySchool: facultySchool.trim().toUpperCase(),
 			batch: toTitleCase(batch),
 			prerequisites: prerequisites.map(toTitleCase),
@@ -188,6 +191,7 @@ export default function RegistrationPage() {
 		setFacultySchool(entry.facultySchool);
 		setBasket(entry.basket || '');
 		setRemarks(entry.remarks || '');
+		setStudentsPerSlot(entry.studentsPerSlot || '');
 		setBatch(entry.batch);
 		setEditingIndex(index);
 		setPrerequisites(entry.prerequisites || []);
@@ -261,8 +265,8 @@ export default function RegistrationPage() {
 			if (response.ok) {
 				setMessage('Registration submitted successfully!');
 				mutateRegistration();
-				setEntries([]);
-				setBatch('');
+				mutateDraft(); // Refetch draft data so entries reload
+				// Do NOT clear entries manually; let SWR refetch and update
 			} else {
 				const error = await response.json();
 				setMessage(error.error || 'Failed to submit registration');
@@ -300,15 +304,24 @@ export default function RegistrationPage() {
 
 		return (
 			<div className="p-4 space-y-6 max-w-5xl mx-auto">
-				{/* Improved Welcome Banner */}
+				{/* Improved Welcome Banner with Programme */}
 				{user && (
+					<>
+					{console.log('USER SESSION OBJECT:', user)}
 					<div className="mb-4 flex flex-col md:flex-row items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-100 to-blue-50 border border-blue-200 shadow-sm">
 						<div className="flex flex-col md:flex-row items-center gap-4">
-							<span className="font-bold text-lg text-blue-900">Welcome, {user.name}</span>
-							<span className="text-blue-700 text-sm">Emp ID: <span className="font-mono font-semibold">{user.id}</span></span>
+							<span className="font-bold text-lg text-black-900">
+								Welcome, {user.name} ({user.id})
+								{user.programme ? (
+									<span className="ml-2 text-blue-700 font-semibold">| Programme: {user.programme}</span>
+								) : user.department ? (
+									<span className="ml-2 text-blue-700 font-semibold">| Department: {user.department}</span>
+								) : null}
+							</span>
 						</div>
 						<Button variant="outline" onClick={handleLogout} className="mt-2 md:mt-0">Logout</Button>
 					</div>
+					</>
 				)}
 				{/* Message Display */}
 				{message && (
@@ -317,11 +330,11 @@ export default function RegistrationPage() {
 
 				<Card>
 					<CardHeader><CardTitle>Registration</CardTitle></CardHeader>
-					<CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+					<CardContent className="grid grid-cols-1 md:grid-cols-1 gap-6 items-start">
 						{/* Draft Select - Listbox */}
 						<div className="relative w-full">
 							<label className="block mb-1 text-sm font-medium">Select Draft</label>
-							<Listbox value={selectedDraft} onChange={val => { setSelectedDraft(val); setBatch(''); setEntries([]); }}>
+							<Listbox value={selectedDraft} onChange={val => { setSelectedDraft(val); setEntries([]); }}>
 								<div className="relative">
 									<Listbox.Button className="w-full flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
 										<span className="truncate text-left">
@@ -337,7 +350,13 @@ export default function RegistrationPage() {
 								</div>
 							</Listbox>
 						</div>
-						{/* Batch Select - Listbox */}
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader><CardTitle>{editingIndex !== null ? 'Edit Course' : 'Add Course'}</CardTitle></CardHeader>
+					<CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+						{/* Batch Select - Listbox (moved here) */}
 						<div className="relative w-full">
 							<label className="block mb-1 text-sm font-medium">Select Batch (Year Of Admission)</label>
 							<Listbox value={batch} onChange={setBatch} disabled={!selectedDraft}>
@@ -354,12 +373,6 @@ export default function RegistrationPage() {
 								</div>
 							</Listbox>
 						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader><CardTitle>{editingIndex !== null ? 'Edit Course' : 'Add Course'}</CardTitle></CardHeader>
-					<CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 						{/* Course Select - Listbox */}
 						<div className="relative w-full">
 							<label className="block mb-1 text-sm font-medium">Select Course</label>
@@ -419,6 +432,10 @@ export default function RegistrationPage() {
 						<div className="flex flex-col gap-2">
 							<label className="block mb-1 text-sm font-medium">AN Slots</label>
 							<Input placeholder="AN Slots" value={anSlots} onChange={e => setAnSlots(Number(e.target.value) || '')} />
+						</div>
+						<div className="flex flex-col gap-2">
+							<label className="block mb-1 text-sm font-medium">Number of Students per Slot</label>
+							<Input placeholder="Number of Students per Slot" value={studentsPerSlot} onChange={e => setStudentsPerSlot(Number(e.target.value) || '')} />
 						</div>
 						<div className="flex flex-col gap-2">
 							<label className="block mb-1 text-sm font-medium">Total Slots</label>
@@ -526,12 +543,12 @@ export default function RegistrationPage() {
 										<TableHead>Strength</TableHead>
 										<TableHead>FN</TableHead>
 										<TableHead>AN</TableHead>
+										<TableHead>Students/Slot</TableHead>
 										<TableHead>Total</TableHead>
 										<TableHead>Faculty School</TableHead>
 										<TableHead>Basket</TableHead>
 										<TableHead>Remarks</TableHead>
 										<TableHead>Prerequisites</TableHead>
-										<TableHead>Student Strength/Slot</TableHead>
 										<TableHead>Actions</TableHead>
 									</TableRow>
 								</TableHeader>
@@ -550,12 +567,12 @@ export default function RegistrationPage() {
 											<TableCell>{e.studentStrength}</TableCell>
 											<TableCell>{e.fnSlots}</TableCell>
 											<TableCell>{e.anSlots}</TableCell>
+											<TableCell>{e.studentsPerSlot ?? '-'}</TableCell>
 											<TableCell className="font-semibold">{e.totalSlots}</TableCell>
 											<TableCell>{e.facultySchool}</TableCell>
 											<TableCell>{e.basket}</TableCell>
 											<TableCell>{e.remarks}</TableCell>
 											<TableCell>{Array.isArray(e.prerequisites) && e.prerequisites.length > 0 ? e.prerequisites.join(', ') : '-'}</TableCell>
-											<TableCell>{e.totalSlots ? Math.round(Number(e.studentStrength) / Number(e.totalSlots)) : '-'}</TableCell>
 											<TableCell className="space-x-2">
 												<Button variant="outline" size="sm" onClick={() => editEntry(idx)}><Edit className="h-3 w-3 mr-1" />Edit</Button>
 												<Button variant="destructive" size="sm" onClick={() => deleteEntry(idx)}><Trash2 className="h-3 w-3 mr-1" />Delete</Button>

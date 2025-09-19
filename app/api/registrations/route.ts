@@ -62,6 +62,7 @@ export async function POST(req: Request) {
 			fnSlots,
 			anSlots,
 			totalSlots: fnSlots + anSlots,
+			studentsPerSlot: typeof e.studentsPerSlot !== 'undefined' ? Number(e.studentsPerSlot) : '',
 			facultySchool: String(e.facultySchool || ''),
 			batch: String(e.batch || ''),
 			prerequisites: Array.isArray(e.prerequisites) ? e.prerequisites.map(String) : [],

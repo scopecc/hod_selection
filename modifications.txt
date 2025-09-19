@@ -1,7 +1,9 @@
-In the global excel file download on the admin side make sure u include these columns
+let courses excel sheet itself have L T P J 
 
-1. sno. prgramme, year of course, course title, 
+make sure the user is able see his / her registrations
 
-pre-requiste missing
-basket missing --> when mutliple 
-remarks missing
+Change the mail content for otp
+
+implement a slider for user wise and search for user name
+
+

@@ -35,7 +35,7 @@ export default function AdminLoginPage() {
 		<div className="flex min-h-screen items-center justify-center p-4">
 			<Card className="w-full max-w-sm">
 				<CardHeader>
-					<CardTitle>Management Login</CardTitle>
+					<CardTitle>Admin Login</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<form onSubmit={submit} className="space-y-3">
@@ -44,7 +44,6 @@ export default function AdminLoginPage() {
 						{error && <div className="text-sm text-red-600">{error}</div>}
 						<div className="flex gap-2">
 							<Button disabled={loading} className="flex-1" type="submit">{loading ? 'Signing in...' : 'Sign in'}</Button>
-							<Button type="button" variant="outline" onClick={handleLogout}>Clear Session</Button>
 						</div>
 					</form>
 				</CardContent>
