@@ -20,14 +20,11 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
     
     // Find OTP record
-    console.log('[DEBUG][verify-otp] Looking for employeeId:', employeeId);
     const otpRecord = await db.collection('otps').findOne({ employeeId });
-    console.log('[DEBUG][verify-otp] Found OTP record:', otpRecord ? 'YES' : 'NO');
     
     if (!otpRecord) {
       // Let's also check if there are any OTPs in the collection
       const allOtps = await db.collection('otps').find({}).toArray();
-      console.log('[DEBUG][verify-otp] All OTPs in collection:', allOtps.length);
       return NextResponse.json(
         { error: 'No OTP found for this employee' },
         { status: 404 }
@@ -57,7 +54,6 @@ export async function POST(request: NextRequest) {
 
     // OTP is valid - return success but DON'T delete OTP yet
     // NextAuth will delete it after successful authentication
-    console.log('[DEBUG][verify-otp] OTP is valid, returning success');
     return NextResponse.json({ success: true });
 
   } catch (error) {
