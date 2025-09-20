@@ -883,6 +883,9 @@ function RegistrationsTab() {
   const [selectedDraft, setSelectedDraft] = useState('');
   const { data, mutate } = useSWR(() => selectedDraft ? `/api/admin/registrations?draftId=${encodeURIComponent(selectedDraft)}` : null, fetcher, { refreshInterval: 5000 });
   useEffect(() => { mutate(); }, [selectedDraft]);
+  // Search/filter and slider state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [visibleEntries, setVisibleEntries] = useState<{ [userId: string]: number }>({});
 
   const downloadRegistrations = async () => {
     if (!selectedDraft || !data || !drafts?.drafts) return;
@@ -982,6 +985,16 @@ function RegistrationsTab() {
     return Array.from(userMap.values());
   }, [data]);
 
+  // Filter users by search term (username or employeeId)
+  const filteredUsers = userWiseRegistrations.filter(user => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return true;
+    return (
+      user.userName.toLowerCase().includes(term) ||
+      user.userId.toLowerCase().includes(term)
+    );
+  });
+
   return (
     <div className="space-y-8">
       {/* Registration Overview */}
@@ -997,7 +1010,7 @@ function RegistrationsTab() {
                 <p className="text-sm text-gray-600">Monitor and manage course registrations</p>
               </div>
             </div>
-            {selectedDraft && userWiseRegistrations.length > 0 && (
+            {selectedDraft && filteredUsers.length > 0 && (
               <button
                 onClick={downloadRegistrations}
                 className={buttonVariants.primary}
@@ -1034,7 +1047,7 @@ function RegistrationsTab() {
             {selectedDraft && (
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-900">{userWiseRegistrations.length}</div>
+                  <div className="text-2xl font-bold text-blue-900">{filteredUsers.length}</div>
                   <div className="text-xs text-blue-600">Total Registered Users</div>
                 </div>
               </div>
@@ -1046,110 +1059,155 @@ function RegistrationsTab() {
       {/* Registration Results */}
       {selectedDraft && (
         <>
-          {userWiseRegistrations.length === 0 ? (
+          {/* Search Bar */}
+          <div className="mb-6">
+            <input
+              type="text"
+              placeholder="Search by name or employee ID..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className={`w-full max-w-md px-4 py-2 rounded-xl border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+            />
+          </div>
+          {filteredUsers.length === 0 ? (
             <EmptyState 
               icon={BarChart3} 
               title="No registrations found" 
-              description="No users have registered for courses in this draft period yet." 
+              description="No users have registered for courses in this draft period yet or no match for search." 
             />
           ) : (
             <div className="space-y-6">
-              {userWiseRegistrations.map(user => (
-                <div key={user.userId} className={`${cardStyles} overflow-hidden`}>
-                  <div className="p-6 border-b border-gray-100/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">{user.userName}</h3>
-                          <div className="flex items-center space-x-3 text-sm text-gray-600">
-                            <span className="font-mono bg-gray-100 px-2 py-1 rounded">{user.userId}</span>
-                            <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs font-medium">{user.department}</span>
-                            <span className="text-gray-500">{user.entries.length} courses</span>
+              {filteredUsers.map(user => {
+                const totalEntries = user.entries.length;
+                const currentIdx = visibleEntries[user.userId] || 0;
+                const showSlider = totalEntries > 5;
+                // Calculate last page start index
+                const lastPageStart = Math.floor((totalEntries - 1) / 5) * 5;
+                // If on last page, show only the remaining entries
+                const isLastPage = currentIdx === lastPageStart;
+                const visible = showSlider
+                  ? user.entries.slice(currentIdx, Math.min(currentIdx + 5, totalEntries))
+                  : user.entries;
+                return (
+                  <div key={user.userId} className={`${cardStyles} overflow-hidden`}>
+                    <div className="p-6 border-b border-gray-100/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">{user.userName}</h3>
+                            <div className="flex items-center space-x-3 text-sm text-gray-600">
+                              <span className="font-mono bg-gray-100 px-2 py-1 rounded">{user.userId}</span>
+                              <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs font-medium">{user.department}</span>
+                              <span className="text-gray-500">{user.entries.length} courses</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          className={buttonVariants.icon}
-                          onClick={() => downloadUserRegistration(user.userId, user.userName, user.department)}
-                          title="Download User Registration"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                        <button
-                          className={`${buttonVariants.icon} text-red-500 hover:text-red-700 hover:bg-red-50`}
-                          onClick={() => deleteUserRegistration(user.userId)}
-                          title="Delete All User Registrations"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            className={buttonVariants.icon}
+                            onClick={() => downloadUserRegistration(user.userId, user.userName, user.department)}
+                            title="Download User Registration"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button
+                            className={`${buttonVariants.icon} text-red-500 hover:text-red-700 hover:bg-red-50`}
+                            onClick={() => deleteUserRegistration(user.userId)}
+                            title="Delete All User Registrations"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50/50 border-b border-gray-100/50">
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Batch</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Course</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Structure</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Credits</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Slots</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">School</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100/50">
-                        {user.entries.map((entry: any, idx: number) => (
-                          <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
-                                {entry.batch}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div>
-                                <div className="font-medium text-gray-900">{entry.courseName}</div>
-                                <div className="text-xs text-gray-500 font-mono">{entry.courseCode}</div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex space-x-1 text-xs">
-                                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">L:{entry.L || 0}</span>
-                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">T:{entry.T || 0}</span>
-                                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">P:{entry.P || 0}</span>
-                                <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">J:{entry.J || 0}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="font-semibold text-gray-900">{entry.credits}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="text-xs space-y-1">
-                                <div>FN: <span className="font-medium">{entry.fnSlots}</span></div>
-                                <div>AN: <span className="font-medium">{entry.anSlots}</span></div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-xs text-gray-600">{entry.facultySchool}</span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <button
-                                className={`${buttonVariants.icon} text-red-500 hover:text-red-700 hover:bg-red-50`}
-                                onClick={() => deleteUserEntry(user.userId, idx)}
-                                title="Delete Course Entry"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </td>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50/50 border-b border-gray-100/50">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Batch</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Course</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Structure</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Credits</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Slots</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">School</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100/50">
+                          {visible.map((entry: any, idx: number) => (
+                            <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                                  {entry.batch}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div>
+                                  <div className="font-medium text-gray-900">{entry.courseName}</div>
+                                  <div className="text-xs text-gray-500 font-mono">{entry.courseCode}</div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex space-x-1 text-xs">
+                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">L:{entry.L || 0}</span>
+                                  <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">T:{entry.T || 0}</span>
+                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">P:{entry.P || 0}</span>
+                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">J:{entry.J || 0}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="font-semibold text-gray-900">{entry.credits}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="text-xs space-y-1">
+                                  <div>FN: <span className="font-medium">{entry.fnSlots}</span></div>
+                                  <div>AN: <span className="font-medium">{entry.anSlots}</span></div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs text-gray-600">{entry.facultySchool}</span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <button
+                                  className={`${buttonVariants.icon} text-red-500 hover:text-red-700 hover:bg-red-50`}
+                                  onClick={() => deleteUserEntry(user.userId, currentIdx + idx)}
+                                  title="Delete Course Entry"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Slider Controls - correctly placed inside user card */}
+                    {showSlider && (
+                      <div className="flex justify-end items-center gap-2 p-2">
+                        <button
+                          className={`${buttonVariants.icon} disabled:opacity-50`}
+                          onClick={() => setVisibleEntries(prev => ({ ...prev, [user.userId]: Math.max(0, currentIdx - 5) }))}
+                          disabled={currentIdx === 0}
+                          title="Previous"
+                        >
+                          &lt;
+                        </button>
+                        <span className="text-xs text-gray-600">
+                          {`Showing ${currentIdx + 1}-${Math.min(currentIdx + 5, totalEntries)} of ${totalEntries}`}
+                        </span>
+                        <button
+                          className={`${buttonVariants.icon} disabled:opacity-50`}
+                          onClick={() => setVisibleEntries(prev => ({ ...prev, [user.userId]: Math.min(lastPageStart, currentIdx + 5) }))}
+                          disabled={isLastPage}
+                          title="Next"
+                        >
+                          &gt;
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </>

@@ -31,7 +31,7 @@ export async function sendOTPEmail(email: string, otp: string, employeeId: strin
           </div>
           
           <p style="color: #666; font-size: 14px; line-height: 1.5;">
-            This OTP is valid for ${process.env.OTP_EXPIRY_MINUTES || 5} minutes. Please do not share this code with anyone.
+            This OTP is valid for ${process.env.OTP_EXPIRY_MINUTES} minutes. Please do not share this code with anyone.
           </p>
           
           <p style="color: #999; font-size: 12px; margin-top: 30px; text-align: center;">
