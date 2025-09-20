@@ -51,7 +51,7 @@ export default function RegistrationPage() {
 	const [courseName, setCourseName] = useState('');
 	const [credits, setCredits] = useState<number | ''>('');
 	const [group, setGroup] = useState('');
-		const [studentStrength, setStudentStrength] = useState<number | ''>('');
+	const [studentStrength, setStudentStrength] = useState<number | ''>('');
 	const [fnSlots, setFnSlots] = useState<number | ''>('');
 	const [anSlots, setAnSlots] = useState<number | ''>('');
 	const [facultySchool, setFacultySchool] = useState('');
@@ -59,10 +59,73 @@ export default function RegistrationPage() {
 	const [remarks, setRemarks] = useState('');
 	const [studentsPerSlot, setStudentsPerSlot] = useState<number | ''>('');
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
+	const [editingSubmissionIdx, setEditingSubmissionIdx] = useState<number | null>(null);
+	const [editSource, setEditSource] = useState<'entry' | 'submission' | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [message, setMessage] = useState('');
 	const [prerequisites, setPrerequisites] = useState<string[]>([]);
+	// Only one declaration at the top, remove any duplicates below
+	// State for prerequisites search in multi-select Listbox
 	const [prereqSearch, setPrereqSearch] = useState('');
+
+	// State for submitted registrations search and edit
+	const [searchSubmitted, setSearchSubmitted] = useState('');
+	const [editingSubmittedIdx, setEditingSubmittedIdx] = useState<number | null>(null);
+	const [editSubmittedEntry, setEditSubmittedEntry] = useState<any | null>(null);
+	const handleEditSubmitted = (idx: number, entry: any) => {
+		setEditingSubmittedIdx(idx);
+		setEditSubmittedEntry({ ...entry });
+	};
+	const handleSaveSubmitted = async () => {
+		if (editingSubmittedIdx === null || !editSubmittedEntry) return;
+		// Prepare updated entries
+		const updatedEntries = [...(existingRegistration?.registration?.entries || [])];
+		updatedEntries[editingSubmittedIdx] = editSubmittedEntry;
+		setEditingSubmittedIdx(null);
+		setEditSubmittedEntry(null);
+		setLoading(true);
+		setMessage('');
+		try {
+			const response = await fetch('/api/registrations', {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ entries: updatedEntries })
+			});
+			if (response.ok) {
+				setMessage('Entry updated successfully!');
+				mutateRegistration();
+			} else {
+				setMessage('Failed to update entry');
+			}
+		} catch {
+			setMessage('Network error');
+		} finally {
+			setLoading(false);
+		}
+	};
+	const handleDeleteSubmitted = async (idx: number) => {
+		if (!window.confirm('Are you sure you want to delete this registration entry?')) return;
+		setLoading(true);
+		setMessage('');
+		try {
+			const updatedEntries = (existingRegistration?.registration?.entries || []).filter((_, i) => i !== idx);
+			const response = await fetch('/api/registrations', {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ entries: updatedEntries })
+			});
+			if (response.ok) {
+				setMessage('Entry deleted successfully!');
+				mutateRegistration();
+			} else {
+				setMessage('Failed to delete entry');
+			}
+		} catch {
+			setMessage('Network error');
+		} finally {
+			setLoading(false);
+		}
+	};
 
 	// Load existing registration if available
 	const { data: userDraft, mutate: mutateDraft } = useSWR(
@@ -76,13 +139,24 @@ export default function RegistrationPage() {
 
 	useEffect(() => {
 		if (userDraft?.draft) {
-			setEntries(userDraft.draft.entries || []);
+			// When loading entries from draft, repopulate L,T,P,J from the current courses database
+			const updatedEntries = (userDraft.draft.entries || []).map((entry: any) => {
+				const course = coursesData?.courses?.find((c: any) => c.courseCode === entry.courseCode);
+				return {
+					...entry,
+					L: course?.L ?? '-',
+					T: course?.T ?? '-',
+					P: course?.P ?? '-',
+					J: course?.J ?? '-',
+				};
+			});
+			setEntries(updatedEntries);
 			// Do not reset batch here, keep user's selection
 		} else {
 			setEntries([]);
 			// Do not reset batch here, keep user's selection
 		}
-	}, [userDraft]);
+	}, [userDraft, coursesData]);
 
 	useEffect(() => {
 		if (!courseCode) { setCourseName(''); setCredits(''); setGroup(''); return; }
@@ -115,38 +189,19 @@ export default function RegistrationPage() {
 		c.courseCode.toLowerCase().includes(prereqSearch.toLowerCase())
 	) || [];
 
-	// Helper to calculate L, T, P, J
-	// Strict calculation for L, T, P, J based on credits (C) and last character of course code
-	const calcLTPJ = (code: string, credits: number) => {
-		code = code.trim().toUpperCase();
-		let L = 0, T = 0, P = 0, J = 0;
-		const lastChar = code.length > 0 ? code[code.length - 1] : '';
-		if (lastChar === 'L') {
-			L = credits;
-			T = 0;
-			P = 0;
-			J = 0;
-		} else if (lastChar === 'J') {
-			J = credits * 4;
-			L = 0;
-			T = 0;
-			P = 0;
-		} else if (lastChar === 'P') {
-			P = credits * 2;
-			L = 0;
-			T = 0;
-			J = 0;
-		}
-		return { L, T, P, J };
-	};
+
+	// No calculation for L,T,P,J. Always use values from the selected course in the database.
 	const addEntry = () => {
 		if (!batch || !courseCode || !courseName || credits === '' || isNaN(Number(credits)) || !studentStrength || !fnSlots || !anSlots || !facultySchool || studentsPerSlot === '') return;
 		const toTitleCase = (str: string): string => str ? str.replace(/\w\S*/g, (txt: string) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()) : '';
 		const totalSlots = Number(fnSlots) + Number(anSlots);
 		const creditsNum = Number(credits);
-		console.log('DEBUG: Credits (C) before LTPJ calculation:', creditsNum);
-		const { L, T, P, J } = calcLTPJ(courseCode, creditsNum);
-		console.log('DEBUG: After LTPJ calculation:', { L, T, P, J });
+		// Get L,T,P,J from the selected course in the database
+		const selectedCourse = coursesData?.courses?.find((c: any) => c.courseCode === courseCode);
+		const L = selectedCourse?.L ?? '-';
+		const T = selectedCourse?.T ?? '-';
+		const P = selectedCourse?.P ?? '-';
+		const J = selectedCourse?.J ?? '-';
 		const newEntry = {
 			courseCode: courseCode.trim().toUpperCase(),
 			courseName: toTitleCase(courseName),
@@ -588,6 +643,97 @@ export default function RegistrationPage() {
 						</CardContent>
 					</Card>
 				)}
+
+				{/* My Submitted Registrations Section */}
+				<Card className="mt-8">
+					<CardHeader><CardTitle>My Submitted Registrations</CardTitle></CardHeader>
+					<CardContent>
+						{/* Search input for filtering registrations */}
+						<div className="mb-4 flex justify-end">
+							<Input
+								placeholder="Search by course code, name, batch..."
+								value={searchSubmitted || ''}
+								onChange={e => setSearchSubmitted(e.target.value)}
+								className="w-64"
+							/>
+						</div>
+						{existingRegistration?.registration?.entries?.length ? (
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Batch</TableHead>
+										<TableHead>Course Code</TableHead>
+										<TableHead>Course Name</TableHead>
+										<TableHead>L</TableHead>
+										<TableHead>T</TableHead>
+										<TableHead>P</TableHead>
+										<TableHead>J</TableHead>
+										<TableHead>Credits</TableHead>
+										<TableHead>Strength</TableHead>
+										<TableHead>FN</TableHead>
+										<TableHead>AN</TableHead>
+										<TableHead>Faculty School</TableHead>
+										<TableHead>Actions</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{existingRegistration.registration.entries
+										.filter(entry => {
+											const q = (searchSubmitted || '').toLowerCase();
+											return (
+												entry.courseCode.toLowerCase().includes(q) ||
+												entry.courseName.toLowerCase().includes(q) ||
+												(entry.batch && entry.batch.toLowerCase().includes(q))
+											);
+										})
+										.map((entry, idx) => (
+											editingSubmittedIdx === idx ? (
+												<TableRow key={idx}>
+													<TableCell><Input value={editSubmittedEntry.batch} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, batch: e.target.value })} className="border rounded px-2 py-1 w-20" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.courseCode} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, courseCode: e.target.value })} className="border rounded px-2 py-1 w-24" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.courseName} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, courseName: e.target.value })} className="border rounded px-2 py-1 w-32" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.L} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, L: e.target.value })} className="border rounded px-2 py-1 w-10" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.T} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, T: e.target.value })} className="border rounded px-2 py-1 w-10" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.P} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, P: e.target.value })} className="border rounded px-2 py-1 w-10" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.J} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, J: e.target.value })} className="border rounded px-2 py-1 w-10" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.credits} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, credits: e.target.value })} className="border rounded px-2 py-1 w-10" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.studentStrength} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, studentStrength: e.target.value })} className="border rounded px-2 py-1 w-10" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.fnSlots} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, fnSlots: e.target.value })} className="border rounded px-2 py-1 w-10" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.anSlots} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, anSlots: e.target.value })} className="border rounded px-2 py-1 w-10" /></TableCell>
+													<TableCell><Input value={editSubmittedEntry.facultySchool} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, facultySchool: e.target.value })} className="border rounded px-2 py-1 w-24" /></TableCell>
+													<TableCell className="space-x-2">
+														<Button variant="outline" size="sm" onClick={handleSaveSubmitted} disabled={loading}><Save className="h-3 w-3 mr-1" />Save</Button>
+														<Button variant="destructive" size="sm" onClick={() => { setEditingSubmittedIdx(null); setEditSubmittedEntry(null); }}><Trash2 className="h-3 w-3 mr-1" />Cancel</Button>
+													</TableCell>
+												</TableRow>
+											) : (
+												<TableRow key={idx}>
+													<TableCell className="font-medium">{entry.batch}</TableCell>
+													<TableCell>{entry.courseCode}</TableCell>
+													<TableCell>{entry.courseName}</TableCell>
+													<TableCell>{entry.L}</TableCell>
+													<TableCell>{entry.T}</TableCell>
+													<TableCell>{entry.P}</TableCell>
+													<TableCell>{entry.J}</TableCell>
+													<TableCell>{entry.credits}</TableCell>
+													<TableCell>{entry.studentStrength}</TableCell>
+													<TableCell>{entry.fnSlots}</TableCell>
+													<TableCell>{entry.anSlots}</TableCell>
+													<TableCell>{entry.facultySchool}</TableCell>
+													<TableCell className="space-x-2">
+														<Button variant="outline" size="sm" onClick={() => handleEditSubmitted(idx, entry)}><Edit className="h-3 w-3 mr-1" />Edit</Button>
+														<Button variant="destructive" size="sm" onClick={() => handleDeleteSubmitted(idx)}><Trash2 className="h-3 w-3 mr-1" />Delete</Button>
+													</TableCell>
+												</TableRow>
+											)
+										))}
+								</TableBody>
+							</Table>
+						) : (
+							<div className="text-gray-500">No registrations submitted yet for this draft.</div>
+						)}
+					</CardContent>
+				</Card>
 			</div>
 		);
 }
