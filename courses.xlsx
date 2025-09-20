@@ -1,16 +1,16 @@
-Course Code,Course Name,Credits,Group
-CSE101L,Introduction to Programming,4,discipline core
-CSE201P,Data Structures and Algorithms,3,discipline core
-CSE301L,Operating Systems,3,discipline elective
-MAT101P,Engineering Mathematics I,4,discipline elective
-MAT201P,Discrete Mathematics,3,open elective
-PHY101P,Engineering Physics,4,discipline core
-CHE101L,Engineering Chemistry,4,open elective
-EEE101L,Basics of Electrical Engineering,3,discipline core
-HUM101L,Professional Communication,2,open elective
-CSE401J,Database Management Systems,3,discipline core
-CSE402J,Computer Networks,3,open elective
-CSE403L,Software Engineering,3,discipline core
-CSE404J,Artificial Intelligence,3,discipline core
-CSE405L,Machine Learning,3,discipline core
-CSE406P,Cloud Computing,3,open elective
+Course Code,Course Name,L,T,P,J,Credits,Group
+CSE101L,Introduction to Programming,4,0,0,0,4,discipline core
+CSE201P,Data Structures and Algorithms,0,0,6,0,3,discipline core
+CSE301L,Operating Systems,3,0,0,0,3,discipline elective
+MAT101P,Engineering Mathematics I,0,0,8,0,4,discipline elective
+MAT201P,Discrete Mathematics,0,0,6,0,3,open elective
+PHY101P,Engineering Physics,0,0,8,0,4,discipline core
+CHE101L,Engineering Chemistry,4,0,0,0,4,open elective
+EEE101L,Basics of Electrical Engineering,3,0,0,0,3,discipline core
+HUM101L,Professional Communication,2,0,0,0,2,open elective
+CSE401J,Database Management Systems,0,0,0,12,3,discipline core
+CSE402J,Computer Networks,0,0,0,12,3,open elective
+CSE403L,Software Engineering,3,0,0,0,3,discipline core
+CSE404J,Artificial Intelligence,0,0,0,12,3,discipline core
+CSE405L,Machine Learning,3,0,0,0,3,discipline core
+CSE406P,Cloud Computing,0,0,6,0,3,open elective

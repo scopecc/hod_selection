@@ -1,7 +1,3 @@
-let courses excel sheet itself have L T P J 
-
 make sure the user is able see his / her registrations
-
-implement a slider for user wise and search for user name
 
 

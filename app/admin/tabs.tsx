@@ -745,6 +745,8 @@ function UploadTab() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      // The backend should parse L, T, P, J columns and save them in DB for each course entry
+      // No calculation needed, just upload and backend will handle storing L, T, P, J
       await fetch(`/api/admin/courses?draftId=${encodeURIComponent(selectedDraft)}`, { method: 'POST', body: formData });
       alert('File uploaded successfully!');
       setFile(null);
@@ -1149,10 +1151,10 @@ function RegistrationsTab() {
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex space-x-1 text-xs">
-                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">L:{entry.L || 0}</span>
-                                  <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">T:{entry.T || 0}</span>
-                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">P:{entry.P || 0}</span>
-                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">J:{entry.J || 0}</span>
+                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">L:{entry.L}</span>
+                                  <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">T:{entry.T}</span>
+                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">P:{entry.P}</span>
+                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">J:{entry.J}</span>
                                 </div>
                               </td>
                               <td className="px-4 py-3">
