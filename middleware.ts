@@ -11,13 +11,9 @@ export async function middleware(req: NextRequest) {
     const adminCookie = req.cookies.get('admin_session')?.value;
     const isAuthed = adminCookie && adminCookie.length > 0;
     
-    console.log('[DEBUG][Middleware] Admin route:', pathname);
-    console.log('[DEBUG][Middleware] Is login page:', isLoginPage);
-    console.log('[DEBUG][Middleware] Admin cookie exists:', !!adminCookie);
-    console.log('[DEBUG][Middleware] Is authenticated:', isAuthed);
+
 
     if (!isAuthed && !isLoginPage) {
-      console.log('[DEBUG][Middleware] Redirecting to admin login');
       const url = req.nextUrl.clone();
       url.pathname = '/admin/login';
       url.search = '';
@@ -25,7 +21,6 @@ export async function middleware(req: NextRequest) {
     }
 
     if (isAuthed && isLoginPage) {
-      console.log('[DEBUG][Middleware] Redirecting to admin dashboard');
       const url = req.nextUrl.clone();
       url.pathname = '/admin';
       url.search = '';

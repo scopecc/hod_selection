@@ -13,7 +13,6 @@ export function createAdminSessionToken(): string {
 	const payload = JSON.stringify({ role: 'admin', iat: Date.now() });
 	const hmac = crypto.createHmac('sha256', ADMIN_SECRET).update(payload).digest('hex');
 	const token = Buffer.from(`${payload}.${hmac}`).toString('base64url');
-	console.log('[DEBUG][Admin Session] Created token:', token.substring(0, 20) + '...');
 	return token;
 }
 
@@ -40,7 +39,6 @@ export function requireAdminFromRequest(req: Request): boolean {
 
 export function setAdminSessionCookie(): void {
 	const token = createAdminSessionToken();
-	console.log('[DEBUG][Admin Session] Creating admin session token');
 	cookies().set('admin_session', token, {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === 'production',
@@ -48,7 +46,6 @@ export function setAdminSessionCookie(): void {
 		maxAge: 60 * 60 * 8,
 		sameSite: 'lax',
 	});
-	console.log('[DEBUG][Admin Session] Admin session cookie set');
 }
 
 export function clearAdminSessionCookie(): void {
@@ -57,9 +54,7 @@ export function clearAdminSessionCookie(): void {
 
 export function isAdminFromCookies(): boolean {
 	const token = cookies().get('admin_session')?.value;
-	console.log('[DEBUG][Admin Session] Checking admin session from cookies:', !!token);
 	const isValid = verifyAdminSessionToken(token);
-	console.log('[DEBUG][Admin Session] Admin session valid:', isValid);
 	return isValid;
 }
 

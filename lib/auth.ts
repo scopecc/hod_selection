@@ -59,55 +59,42 @@ export const authOptions: NextAuthOptions = {
           const otpCollection = db.collection('otps');
 
           // Find the OTP record for this employee
-          console.log('[DEBUG][NextAuth OTP] Looking for employeeId:', credentials.employeeId);
           const otpRecord = await otpCollection.findOne({
             employeeId: credentials.employeeId,
           });
-          console.log('[DEBUG][NextAuth OTP] Found OTP record:', otpRecord ? 'YES' : 'NO');
           if (otpRecord) {
-            console.log('[DEBUG][NextAuth OTP] OTP expires at:', otpRecord.expiresAt);
-            console.log('[DEBUG][NextAuth OTP] Current time:', new Date());
           }
 
           if (!otpRecord) {
             // Let's also check if there are any OTPs in the collection
             const allOtps = await otpCollection.find({}).toArray();
-            console.log('[DEBUG][NextAuth OTP] All OTPs in collection:', allOtps.length);
             throw new Error('OTP not found or expired');
           }
 
           // Check if OTP has expired
           const isExpired = isOTPExpired(otpRecord.expiresAt);
-          console.log('[DEBUG][NextAuth OTP] OTP expired check:', isExpired);
           if (isExpired) {
             // Clean up expired OTP
-            console.log('[DEBUG][NextAuth OTP] OTP is expired, deleting');
             await otpCollection.deleteOne({ employeeId: credentials.employeeId });
             throw new Error('OTP has expired');
           }
 
           // Verify the OTP
-          console.log('[DEBUG][NextAuth OTP] Verifying OTP:', credentials.otp);
           const isValidOTP = verifyOTP(credentials.otp, otpRecord.hashedOTP);
-          console.log('[DEBUG][NextAuth OTP] OTP verification result:', isValidOTP);
           
           if (!isValidOTP) {
             throw new Error('Invalid OTP');
           }
 
           // OTP is valid, get employee data
-          console.log('[DEBUG][NextAuth OTP] Looking up employee:', credentials.employeeId);
           const employee = await findEmployeeById(credentials.employeeId);
-          console.log('[DEBUG][NextAuth OTP] Employee found:', employee ? 'YES' : 'NO');
           
           if (!employee) {
             throw new Error('Employee not found');
           }
 
           // Clean up used OTP
-          console.log('[DEBUG][NextAuth OTP] Deleting OTP for employee:', credentials.employeeId);
           await otpCollection.deleteOne({ employeeId: credentials.employeeId });
-          console.log('[DEBUG][NextAuth OTP] OTP deleted successfully');
 
           return {
             id: employee.employeeId,
@@ -117,7 +104,6 @@ export const authOptions: NextAuthOptions = {
             programme: employee.programme,
           };
         } catch (error) {
-          console.error('OTP verification error:', error);
           throw error;
         }
       }
