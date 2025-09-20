@@ -30,29 +30,11 @@ export async function POST(req: Request) {
 	const userDoc = await db.collection('VIT_Auth').findOne({ employeeId: userId });
 	const programme = userDoc?.programme || '';
 
-	// Ensure totalSlots = fnSlots + anSlots and sanitize types
+	// Use L, T, P, J values from the request body (frontend)
 	const normalizedEntries = entries.map((e: any) => {
 		const fnSlots = Number(e.fnSlots || 0);
 		const anSlots = Number(e.anSlots || 0);
 		const creditsNum = Number(e.credits || 0);
-		const code = String(e.courseCode || '').trim().toUpperCase();
-		let L = 0, T = 0, P = 0, J = 0;
-		if (code.endsWith('L')) {
-			L = creditsNum;
-			T = 0;
-			P = 0;
-			J = 0;
-		} else if (code.endsWith('J')) {
-			J = creditsNum * 4;
-			L = 0;
-			T = 0;
-			P = 0;
-		} else if (code.endsWith('P')) {
-			P = creditsNum * 2;
-			L = 0;
-			T = 0;
-			J = 0;
-		}
 		return {
 			courseCode: String(e.courseCode || ''),
 			courseName: String(e.courseName || ''),
@@ -68,10 +50,10 @@ export async function POST(req: Request) {
 			prerequisites: Array.isArray(e.prerequisites) ? e.prerequisites.map(String) : [],
 			basket: String(e.basket || ''),
 			remarks: String(e.remarks || ''),
-			L,
-			T,
-			P,
-			J
+			L: typeof e.L !== 'undefined' ? e.L : '-',
+			T: typeof e.T !== 'undefined' ? e.T : '-',
+			P: typeof e.P !== 'undefined' ? e.P : '-',
+			J: typeof e.J !== 'undefined' ? e.J : '-',
 		};
 	});
 
@@ -91,27 +73,15 @@ export async function POST(req: Request) {
 			a.totalSlots === b.totalSlots &&
 			a.facultySchool === b.facultySchool &&
 			a.batch === b.batch &&
-			JSON.stringify(a.prerequisites) === JSON.stringify(b.prerequisites);
+			JSON.stringify(a.prerequisites) === JSON.stringify(b.prerequisites) &&
+			a.L === b.L &&
+			a.T === b.T &&
+			a.P === b.P &&
+			a.J === b.J;
 	}
 
-	// Merge logic: for each new entry, update if differs, add if not exists
-	const upsertEntries = (sourceEntries: any[]) => {
-		for (const entry of sourceEntries) {
-			const idx = mergedEntries.findIndex((e: any) => e.courseCode === entry.courseCode);
-			if (idx === -1) {
-				mergedEntries.push(entry);
-			} else if (!entriesEqual(mergedEntries[idx], entry)) {
-				mergedEntries[idx] = entry;
-			}
-			// else identical, skip
-		}
-	};
-
-	upsertEntries(normalizedEntries);
-	const userDraft = await db.collection('user_drafts').findOne({ draftId, userId });
-	if (userDraft?.entries) {
-		upsertEntries(userDraft.entries);
-	}
+	// Overwrite entries with the new array from the frontend (no merging)
+	mergedEntries = normalizedEntries;
 
 	await db.collection('registrations').updateOne(
 		{ draftId, userId },

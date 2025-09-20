@@ -59,6 +59,11 @@ export default function RegistrationPage() {
 	const [remarks, setRemarks] = useState('');
 	const [studentsPerSlot, setStudentsPerSlot] = useState<number | ''>('');
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
+	// Form state for L, T, P, J
+	const [L, setL] = useState<any>('');
+	const [T, setT] = useState<any>('');
+	const [P, setP] = useState<any>('');
+	const [J, setJ] = useState<any>('');
 	const [editingSubmissionIdx, setEditingSubmissionIdx] = useState<number | null>(null);
 	const [editSource, setEditSource] = useState<'entry' | 'submission' | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -73,32 +78,86 @@ export default function RegistrationPage() {
 	const [editingSubmittedIdx, setEditingSubmittedIdx] = useState<number | null>(null);
 	const [editSubmittedEntry, setEditSubmittedEntry] = useState<any | null>(null);
 	const handleEditSubmitted = (idx: number, entry: any) => {
+		// Autofill main form with submitted entry values, set edit mode to 'submission'
+		setEditingIndex(null); // clear entry edit
 		setEditingSubmittedIdx(idx);
-		setEditSubmittedEntry({ ...entry });
+		setEditSource('submission');
+		setCourseCode(entry.courseCode);
+		setCourseName(entry.courseName);
+		setCredits(entry.credits);
+		setGroup(entry.group || '');
+		setStudentStrength(entry.studentStrength);
+		setFnSlots(entry.fnSlots);
+		setAnSlots(entry.anSlots);
+		setFacultySchool(entry.facultySchool);
+		setBasket(entry.basket || '');
+		setRemarks(entry.remarks || '');
+		setStudentsPerSlot(entry.studentsPerSlot || '');
+		setBatch(entry.batch);
+		setPrerequisites(entry.prerequisites || []);
+		// Also set L, T, P, J in the form state so they are preserved
+		setL(entry.L ?? '');
+		setT(entry.T ?? '');
+		setP(entry.P ?? '');
+		setJ(entry.J ?? '');
 	};
 	const handleSaveSubmitted = async () => {
-		if (editingSubmittedIdx === null || !editSubmittedEntry) return;
-		// Prepare updated entries
+		if (editingSubmittedIdx === null) return;
+		// Build updated entry from main form state, always refresh L,T,P,J from backend course data
+		const toTitleCase = (str: string): string => str ? str.replace(/\w\S*/g, (txt: string) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()) : '';
+		const selectedCourse = coursesData?.courses?.find((c: any) => c.courseCode === courseCode);
+		const L = selectedCourse?.L ?? '-';
+		const T = selectedCourse?.T ?? '-';
+		const P = selectedCourse?.P ?? '-';
+		const J = selectedCourse?.J ?? '-';
+		const totalSlots = Number(fnSlots) + Number(anSlots);
+		const creditsNum = Number(credits);
+		const newEntry = {
+			courseCode: courseCode.trim().toUpperCase(),
+			courseName: toTitleCase(courseName),
+			credits: creditsNum,
+			group: toTitleCase(group),
+			studentStrength: Number(studentStrength),
+			fnSlots: Number(fnSlots),
+			anSlots: Number(anSlots),
+			totalSlots,
+			studentsPerSlot: Number(studentsPerSlot),
+			facultySchool: facultySchool.trim().toUpperCase(),
+			batch: toTitleCase(batch),
+			prerequisites: prerequisites.map(toTitleCase),
+			basket: toTitleCase(basket),
+			remarks: toTitleCase(remarks),
+			L,
+			T,
+			P,
+			J
+		};
 		const updatedEntries = [...(existingRegistration?.registration?.entries || [])];
-		updatedEntries[editingSubmittedIdx] = editSubmittedEntry;
-		setEditingSubmittedIdx(null);
-		setEditSubmittedEntry(null);
+		updatedEntries[editingSubmittedIdx] = newEntry;
 		setLoading(true);
 		setMessage('');
 		try {
+			const reqBody = { draftId: selectedDraft, entries: updatedEntries };
+			console.log('DEBUG: POST /api/registrations body:', reqBody);
 			const response = await fetch('/api/registrations', {
-				method: 'PUT',
+				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ entries: updatedEntries })
+				body: JSON.stringify(reqBody)
 			});
+			const respText = await response.text();
+			console.log('DEBUG: POST /api/registrations response:', respText);
 			if (response.ok) {
 				setMessage('Entry updated successfully!');
 				mutateRegistration();
+				setEditingSubmittedIdx(null);
+				setEditSubmittedEntry(null);
+				resetForm();
 			} else {
-				setMessage('Failed to update entry');
+				setMessage('Failed to update entry: ' + respText);
 			}
-		} catch {
+		} catch (err) {
 			setMessage('Network error');
+			console.error('DEBUG: Network error in handleSaveSubmitted', err);
 		} finally {
 			setLoading(false);
 		}
@@ -108,15 +167,21 @@ export default function RegistrationPage() {
 		setLoading(true);
 		setMessage('');
 		try {
-			const updatedEntries = (existingRegistration?.registration?.entries || []).filter((_, i) => i !== idx);
-			const response = await fetch('/api/registrations', {
-				method: 'PUT',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ entries: updatedEntries })
-			});
+				const updatedEntries = (existingRegistration?.registration?.entries || []).filter((_: any, i: number) => i !== idx);
+				const response = await fetch('/api/registrations', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ draftId: selectedDraft, entries: updatedEntries })
+				});
 			if (response.ok) {
 				setMessage('Entry deleted successfully!');
 				mutateRegistration();
+				// If the deleted entry was being edited, reset form and edit state
+				if (editSource === 'submission' && editingSubmittedIdx === idx) {
+					setEditingSubmittedIdx(null);
+					setEditSource(null);
+					resetForm();
+				}
 			} else {
 				setMessage('Failed to delete entry');
 			}
@@ -182,6 +247,10 @@ export default function RegistrationPage() {
 		setStudentsPerSlot('');
 		setEditingIndex(null);
 		setPrerequisites([]);
+		setL('');
+		setT('');
+		setP('');
+		setJ('');
 	};
 
 	const filteredCourses = coursesData?.courses?.filter((c: any) =>
@@ -191,17 +260,16 @@ export default function RegistrationPage() {
 
 
 	// No calculation for L,T,P,J. Always use values from the selected course in the database.
-	const addEntry = () => {
+	const addEntry = async () => {
 		if (!batch || !courseCode || !courseName || credits === '' || isNaN(Number(credits)) || !studentStrength || !fnSlots || !anSlots || !facultySchool || studentsPerSlot === '') return;
 		const toTitleCase = (str: string): string => str ? str.replace(/\w\S*/g, (txt: string) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()) : '';
 		const totalSlots = Number(fnSlots) + Number(anSlots);
 		const creditsNum = Number(credits);
-		// Get L,T,P,J from the selected course in the database
 		const selectedCourse = coursesData?.courses?.find((c: any) => c.courseCode === courseCode);
-		const L = selectedCourse?.L ?? '-';
-		const T = selectedCourse?.T ?? '-';
-		const P = selectedCourse?.P ?? '-';
-		const J = selectedCourse?.J ?? '-';
+		const Lval = L !== '' ? L : (selectedCourse?.L ?? '-');
+		const Tval = T !== '' ? T : (selectedCourse?.T ?? '-');
+		const Pval = P !== '' ? P : (selectedCourse?.P ?? '-');
+		const Jval = J !== '' ? J : (selectedCourse?.J ?? '-');
 		const newEntry = {
 			courseCode: courseCode.trim().toUpperCase(),
 			courseName: toTitleCase(courseName),
@@ -217,21 +285,57 @@ export default function RegistrationPage() {
 			prerequisites: prerequisites.map(toTitleCase),
 			basket: toTitleCase(basket),
 			remarks: toTitleCase(remarks),
-			L,
-			T,
-			P,
-			J
+			L: Lval,
+			T: Tval,
+			P: Pval,
+			J: Jval
 		};
-		if (editingIndex !== null) {
-			// Update existing entry
+		if (editSource === 'submission' && editingSubmittedIdx !== null) {
+			// Update submitted registration entry and submit directly
+			setLoading(true);
+			setMessage('');
+			// Always refresh L,T,P,J from backend course data
+			const updatedEntries = [...(existingRegistration?.registration?.entries || [])];
+			const selectedCourse = coursesData?.courses?.find((c: any) => c.courseCode === newEntry.courseCode);
+			updatedEntries[editingSubmittedIdx] = {
+				...newEntry,
+				L: selectedCourse?.L ?? '-',
+				T: selectedCourse?.T ?? '-',
+				P: selectedCourse?.P ?? '-',
+				J: selectedCourse?.J ?? '-',
+			};
+			try {
+				const response = await fetch('/api/registrations', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ draftId: selectedDraft, entries: updatedEntries })
+				});
+				if (response.ok) {
+					setMessage('Entry updated and submitted successfully!');
+					mutateRegistration();
+				} else {
+					setMessage('Failed to update submitted entry');
+				}
+			} catch {
+				setMessage('Network error');
+			} finally {
+				setLoading(false);
+				setEditingSubmittedIdx(null);
+				setEditSource(null);
+				resetForm();
+			}
+		} else if (editingIndex !== null) {
+			// Update existing entry in draft
 			const newEntries = [...entries];
 			newEntries[editingIndex] = newEntry;
 			setEntries(newEntries);
+			resetForm();
+			setEditingIndex(null);
 		} else {
-			// Add new entry
+			// Add new entry to draft
 			setEntries([...entries, newEntry]);
+			resetForm();
 		}
-		resetForm();
 	};
 
 	const editEntry = (index: number) => {
@@ -362,7 +466,6 @@ export default function RegistrationPage() {
 				{/* Improved Welcome Banner with Programme */}
 				{user && (
 					<>
-					{console.log('USER SESSION OBJECT:', user)}
 					<div className="mb-4 flex flex-col md:flex-row items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-100 to-blue-50 border border-blue-200 shadow-sm">
 						<div className="flex flex-col md:flex-row items-center gap-4">
 							<span className="font-bold text-lg text-black-900">
@@ -573,8 +676,23 @@ export default function RegistrationPage() {
 							</div>
 						</div>
 						<div className="md:col-span-3 flex gap-2 mt-4">
-							<Button onClick={addEntry} disabled={!batch || !courseCode || !courseName || !credits || !studentStrength || !fnSlots || !anSlots || !facultySchool} className="flex-1">{editingIndex !== null ? <Edit className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}{editingIndex !== null ? 'Update Course' : 'Add Course'}</Button>
-							{editingIndex !== null && (<Button variant="outline" onClick={resetForm}><X className="h-4 w-4 mr-2" />Cancel</Button>)}
+							<Button
+								onClick={addEntry}
+								disabled={!batch || !courseCode || !courseName || !credits || !studentStrength || !fnSlots || !anSlots || !facultySchool || loading}
+								className="flex-1"
+							>
+								{editSource === 'submission' && editingSubmittedIdx !== null ? (
+									<Send className="h-4 w-4 mr-2" />
+								) : editingIndex !== null ? (
+									<Edit className="h-4 w-4 mr-2" />
+								) : (
+									<Plus className="h-4 w-4 mr-2" />
+								)}
+								{editSource === 'submission' && editingSubmittedIdx !== null ? 'Submit Course' : editingIndex !== null ? 'Update Course' : 'Add Course'}
+							</Button>
+							{(editingIndex !== null || (editSource === 'submission' && editingSubmittedIdx !== null)) && (
+								<Button variant="outline" onClick={resetForm}><X className="h-4 w-4 mr-2" />Cancel</Button>
+							)}
 						</div>
 					</CardContent>
 				</Card>
@@ -678,7 +796,7 @@ export default function RegistrationPage() {
 								</TableHeader>
 								<TableBody>
 									{existingRegistration.registration.entries
-										.filter(entry => {
+										.filter((entry: any) => {
 											const q = (searchSubmitted || '').toLowerCase();
 											return (
 												entry.courseCode.toLowerCase().includes(q) ||
@@ -686,8 +804,8 @@ export default function RegistrationPage() {
 												(entry.batch && entry.batch.toLowerCase().includes(q))
 											);
 										})
-										.map((entry, idx) => (
-											editingSubmittedIdx === idx ? (
+										.map((entry: any, idx: number) => (
+											editingSubmittedIdx === idx && editSubmittedEntry ? (
 												<TableRow key={idx}>
 													<TableCell><Input value={editSubmittedEntry.batch} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, batch: e.target.value })} className="border rounded px-2 py-1 w-20" /></TableCell>
 													<TableCell><Input value={editSubmittedEntry.courseCode} onChange={e => setEditSubmittedEntry({ ...editSubmittedEntry, courseCode: e.target.value })} className="border rounded px-2 py-1 w-24" /></TableCell>
