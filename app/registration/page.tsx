@@ -138,14 +138,12 @@ export default function RegistrationPage() {
 		setMessage('');
 		try {
 			const reqBody = { draftId: selectedDraft, entries: updatedEntries };
-			console.log('DEBUG: POST /api/registrations body:', reqBody);
 			const response = await fetch('/api/registrations', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify(reqBody)
 			});
 			const respText = await response.text();
-			console.log('DEBUG: POST /api/registrations response:', respText);
 			if (response.ok) {
 				setMessage('Entry updated successfully!');
 				mutateRegistration();
@@ -157,7 +155,6 @@ export default function RegistrationPage() {
 			}
 		} catch (err) {
 			setMessage('Network error');
-			console.error('DEBUG: Network error in handleSaveSubmitted', err);
 		} finally {
 			setLoading(false);
 		}
