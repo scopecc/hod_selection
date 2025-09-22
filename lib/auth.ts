@@ -1,4 +1,18 @@
-import { NextAuthOptions } from 'next-auth';
+import { NextAuthOptions, Session } from 'next-auth';
+// Extend the Session type to include custom fields
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      department?: string;
+      programme?: string;
+      role?: string;
+    };
+  }
+}
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import CredentialsProvider from 'next-auth/providers/credentials';
 import clientPromise from './mongodb';

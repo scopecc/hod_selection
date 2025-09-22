@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { seedEmployeeData } from '@/lib/employee';
+
 
 /**
  * API route to seed employee data for development
@@ -15,17 +15,9 @@ export async function POST() {
       );
     }
 
-    await seedEmployeeData();
     return NextResponse.json({ 
-      message: 'Employee data seeded successfully',
-      employees: [
-        'EMP001 - John Doe (Engineering)',
-        'EMP002 - Jane Smith (Marketing)',
-        'EMP003 - Mike Johnson (Sales)',
-        'EMP004 - Sarah Wilson (HR)',
-        'EMP005 - David Brown (Finance)',
-      ]
-    });
+      error: 'Seeding not implemented: seedEmployeeData is missing.'
+    }, { status: 500 });
   } catch (error) {
     console.error('Seeding error:', error);
     return NextResponse.json(

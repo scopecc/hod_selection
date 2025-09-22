@@ -95,12 +95,12 @@ function UsersTab() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Dropdown positioning state and refs
-  const departmentBtnRef = React.useRef(null);
-  const [departmentDropdownPos, setDepartmentDropdownPos] = useState(null);
+  const departmentBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  const [departmentDropdownPos, setDepartmentDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const [departmentOpen, setDepartmentOpen] = useState(false);
 
-  const programmeBtnRef = React.useRef(null);
-  const [programmeDropdownPos, setProgrammeDropdownPos] = useState(null);
+  const programmeBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  const [programmeDropdownPos, setProgrammeDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const [programmeOpen, setProgrammeOpen] = useState(false);
 
   // Calculate dropdown position on open
