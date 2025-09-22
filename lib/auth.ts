@@ -114,15 +114,12 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60, // 24 hours
+    maxAge: 24 * 60 * 60, 
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Copy all fields from user object to token
         Object.assign(token, user);
-        // Default role to 'user' unless provided
-        // @ts-ignore
         token.role = (user as any).role || 'user';
       }
       return token;
@@ -132,7 +129,6 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.department = token.department as string;
         session.user.programme = token.programme as string;
-        // @ts-ignore
         session.user.role = (token as any).role as string | undefined;
       }
       return session;

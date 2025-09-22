@@ -2,7 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import bcrypt from 'bcryptjs';
-import { sendOTPEmail, maskEmail } from '@/lib/email';
+import { sendOTPEmail } from '@/lib/email';
+import { maskEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
