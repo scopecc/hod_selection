@@ -73,7 +73,7 @@ export function OTPVerificationForm() {
       const result = await signIn('otp-verification', {
         employeeId,
         otp: otpCode,
-        redirect: false,
+        redirect: true,
       });
 
       if (result?.error) throw new Error(result.error);

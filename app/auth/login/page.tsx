@@ -94,7 +94,7 @@ export default function LoginPage() {
       if (response.ok) {
         // Now establish NextAuth session using credentials provider
         const result = await signIn('otp-verification', {
-          redirect: false,
+          redirect: true,
           employeeId: employeeId.trim(),
           otp: otp.trim(),
         });

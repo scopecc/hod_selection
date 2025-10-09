@@ -44,12 +44,13 @@ export function setAdminSessionCookie(): void {
 		secure: process.env.NODE_ENV === 'production',
 		path: '/',
 		maxAge: 60 * 60 * 8,
-		sameSite: 'lax',
+		sameSite: 'none',
+		domain: ".scopevitcc.in"
 	});
 }
 
 export function clearAdminSessionCookie(): void {
-	cookies().set('admin_session', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 0, sameSite: 'lax' });
+	cookies().set('admin_session', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 0, sameSite: 'none', domain: ".scopevitcc.in" });
 }
 
 export function isAdminFromCookies(): boolean {
