@@ -32,6 +32,21 @@ export async function middleware(req: NextRequest) {
   // Protect user registration route with NextAuth JWT
   if (pathname.startsWith('/registration')) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+    // Optional debug logging when DEBUG_MIDDLEWARE=true in env
+    try {
+      if (process.env.DEBUG_MIDDLEWARE === 'true') {
+        // Log minimal info - avoid sensitive payloads
+        console.log('middleware: /registration getToken ->', Boolean(token));
+        if (token) {
+          console.log('middleware token id:', (token as any).sub || (token as any).id || null);
+          console.log('middleware token role:', (token as any).role || null);
+        }
+      }
+    } catch (e) {
+      // ignore logging errors
+    }
+
     if (!token) {
       const url = req.nextUrl.clone();
       url.pathname = '/auth/login';
