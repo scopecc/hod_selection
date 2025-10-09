@@ -8,7 +8,7 @@ export interface OTPData {
 }
 
 /**
- * Generate a 6-digit OTP and return both plain and hashed versions
+ * Generate a 6-digit OTP and return both plain and hashed versions.
  * @returns Object containing plain OTP, hashed OTP, and expiration time
  */
 export function generateOTP(): OTPData {
