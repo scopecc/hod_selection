@@ -30,7 +30,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Protect user registration route with NextAuth JWT
-  if (pathname.startsWith('/registration') || pathname.startsWith('/dashboard')) {
+  if (pathname.startsWith('/registration')) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
       const url = req.nextUrl.clone();
@@ -48,6 +48,5 @@ export const config = {
   matcher: [
     '/admin/:path*',
     '/registration',
-    '/dashboard',
   ],
 };

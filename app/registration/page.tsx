@@ -15,7 +15,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 export default function RegistrationPage() {
 	// Block back navigation to login pages after login
 	useEffect(() => {
-		const forbidden = ['/auth/login', '/auth/signin', '/auth', '/login'];
+		const forbidden = ['/auth/login', '/auth', '/login'];
 		const handlePopState = () => {
 			if (forbidden.includes(window.location.pathname)) {
 				window.location.replace('/registration');
