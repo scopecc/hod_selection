@@ -74,6 +74,8 @@ export function OTPVerificationForm() {
         employeeId,
         otp: otpCode,
         redirect: true,
+        callbackUrl: '/registration'
+
       });
 
       if (result?.error) throw new Error(result.error);

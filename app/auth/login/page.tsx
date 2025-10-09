@@ -97,6 +97,7 @@ export default function LoginPage() {
           redirect: true,
           employeeId: employeeId.trim(),
           otp: otp.trim(),
+          callbackUrl: '/registration',
         });
 
         if (result?.error) {
