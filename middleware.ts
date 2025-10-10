@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+// use server-side session check via internal API instead of getToken in Edge
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -31,26 +31,47 @@ export async function middleware(req: NextRequest) {
 
   // Protect user registration route with NextAuth JWT
   if (pathname.startsWith('/registration')) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    // Call internal NextAuth session endpoint, forwarding cookies, so the
+    // validation is performed in the server runtime that has access to the
+    // NEXTAUTH_SECRET. This avoids requiring the Edge runtime to have the
+    // secret available.
+    let session: any = null;
+    try {
+      const origin = req.nextUrl.origin || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+      const resp = await fetch(`${origin}/api/auth/session`, {
+        method: 'GET',
+        headers: {
+          // forward cookies so the session endpoint can read the token
+          cookie: req.headers.get('cookie') || ''
+        }
+      });
+      if (resp.ok) {
+        try {
+          session = await resp.json();
+        } catch (e) {
+          session = null;
+        }
+      }
+    } catch (e) {
+      // network or other error - treat as missing session
+      session = null;
+    }
 
     // Optional debug logging when DEBUG_MIDDLEWARE=true in env
     try {
       if (process.env.DEBUG_MIDDLEWARE === 'true') {
-        // Log minimal info - avoid sensitive payloads
-        console.log('middleware: /registration getToken ->', Boolean(token));
-        if (token) {
-          console.log('middleware token id:', (token as any).sub || (token as any).id || null);
-          console.log('middleware token role:', (token as any).role || null);
+        console.log('middleware: /registration session ->', Boolean(session));
+        if (session && session.user) {
+          console.log('middleware session user:', session.user.id || session.user.name || session.user.email || null);
         }
       }
     } catch (e) {
       // ignore logging errors
     }
 
-    if (!token) {
+    if (!session || !session.user) {
       const url = req.nextUrl.clone();
       url.pathname = '/auth/login';
-      // attach a short code so the client can show a helpful message (no secrets)
       try {
         url.searchParams.set('auth_error', 'token_missing');
       } catch (e) {
