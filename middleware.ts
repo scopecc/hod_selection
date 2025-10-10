@@ -50,7 +50,12 @@ export async function middleware(req: NextRequest) {
     if (!token) {
       const url = req.nextUrl.clone();
       url.pathname = '/auth/login';
-      url.search = '';
+      // attach a short code so the client can show a helpful message (no secrets)
+      try {
+        url.searchParams.set('auth_error', 'token_missing');
+      } catch (e) {
+        url.search = '?auth_error=token_missing';
+      }
       return NextResponse.redirect(url);
     }
     return NextResponse.next();

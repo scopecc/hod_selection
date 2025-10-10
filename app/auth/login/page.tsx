@@ -23,6 +23,24 @@ export default function LoginPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
   const { data: session, status } = useSession();
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+
+  // Show middleware-provided auth error if present
+  React.useEffect(() => {
+    try {
+      const err = new URLSearchParams(window.location.search).get('auth_error');
+      if (err) {
+        if (err === 'token_missing') setError('Session not found or expired. Please sign in again.');
+        else setError('Authentication error. Please try again.');
+        // remove the query param so it doesn't persist on reload/navigation
+        const url = new URL(window.location.href);
+        url.searchParams.delete('auth_error');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   // If already logged in, redirect to /registration
   React.useEffect(() => {
