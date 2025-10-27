@@ -86,7 +86,7 @@ function UsersTab() {
     { degree: 'BSC', programme: '—', representation: 'BCS' }
   ];
   const departmentOptions = Array.from(new Set(programmeOptions.map(opt => opt.programme).filter(p => p !== '—'))).concat(['Other']);
-  const [form, setForm] = useState({ name: '', employeeId: '', email: '', department: '', programme: '' });
+  const [form, setForm] = useState({ name: '', employeeId: '', email: '', department: '', programme: 'SCOPE' });
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [programmeSearch, setProgrammeSearch] = useState('');
@@ -137,7 +137,7 @@ function UsersTab() {
       } else {
         await fetch('/api/admin/users', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
       }
-      setForm({ name: '', employeeId: '', email: '', department: '', programme: '' });
+      setForm({ name: '', employeeId: '', email: '', department: '', programme: 'SCOPE' });
       setEditingUser(null);
       setIsEditing(false);
       mutate();
@@ -159,7 +159,7 @@ function UsersTab() {
   };
 
   const cancelEdit = () => {
-    setForm({ name: '', employeeId: '', email: '', department: '', programme: '' });
+    setForm({ name: '', employeeId: '', email: '', department: '', programme: 'SCOPE' });
     setEditingUser(null);
     setIsEditing(false);
   };
@@ -473,7 +473,7 @@ function UsersTab() {
 
 function DraftsTab() {
   const { data, mutate } = useSWR('/api/admin/drafts', fetcher);
-  const [form, setForm] = useState({ name: '', yearStart: '', yearEnd: '' });
+  const [form, setForm] = useState({ name: '', yearStart: '', yearEnd: '', programme: 'SCOPE' });
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredDrafts = data?.drafts?.filter((draft: any) =>
@@ -496,7 +496,7 @@ function DraftsTab() {
         alert('Failed to create draft.');
         return;
       }
-      setForm({ name: '', yearStart: '', yearEnd: '' });
+      setForm({ name: '', yearStart: '', yearEnd: '', programme: 'SCOPE' });
       mutate();
     } catch (error) {
       console.error('Error creating draft:', error);
