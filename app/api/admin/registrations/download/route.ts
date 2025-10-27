@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 				// Unified row structure (no Username/User ID). Follow requested order and rename headers.
 				const row: any = {
 					'SNO.': excelData.length + 1,
-					'Stream': reg.programme || '',
+					'Stream': reg.department || '',
 					'Course Type': entry.group || '',
 					'Course Code': entry.courseCode,
 					'Course Title': entry.courseName,

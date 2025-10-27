@@ -70,18 +70,18 @@ function UsersTab() {
   const { data, mutate } = useSWR('/api/admin/users', fetcher);
   // Extract unique programme values from programmeOptions and add Other
   const programmeOptions = [
-    { degree: 'BTech', programme: 'CSE', representation: 'BTech BCE' },
-    { degree: 'BTech', programme: 'AIML', representation: 'BTech BAI' },
-    { degree: 'BTech', programme: 'AIR', representation: 'BTech BRS' },
-    { degree: 'BTech', programme: 'Cyber Security', representation: 'BTech BYB' },
-    { degree: 'BTech', programme: 'Data Science', representation: 'BTech BDS' },
-    { degree: 'BTech', programme: 'CPS', representation: 'BTech BPS' },
-    { degree: 'MTech (Int)', programme: 'Business Analytics (2021–2024) / Data Science (2025)', representation: 'MTech MIA / MID' },
-    { degree: 'MTech (Int)', programme: 'SE', representation: 'MTech MIS' },
-    { degree: 'MTech', programme: 'CSE', representation: 'MTech MCS' },
-    { degree: 'MTech', programme: 'AIML', representation: 'MTech MAI' },
-    { degree: 'MTech LTI', programme: 'AIML', representation: 'MTech MML' },
-    { degree: 'MTech LTI', programme: 'AIDS', representation: 'MTech MAS' },
+    { degree: 'BTech', programme: 'BTech CSE', representation: 'BTech BCE' },
+    { degree: 'BTech', programme: 'BTech AIML', representation: 'BTech BAI' },
+    { degree: 'BTech', programme: 'BTech AIR', representation: 'BTech BRS' },
+    { degree: 'BTech', programme: 'BTech Cyber Security', representation: 'BTech BYB' },
+    { degree: 'BTech', programme: 'BTech Data Science', representation: 'BTech BDS' },
+    { degree: 'BTech', programme: 'BTech CPS', representation: 'BTech BPS' },
+    { degree: 'MTech (Int)', programme: 'MTech Business Analytics (2021–2024) / Data Science (2025)', representation: 'MTech MIA / MID' },
+    { degree: 'MTech (Int)', programme: 'MTech SE', representation: 'MTech MIS' },
+    { degree: 'MTech', programme: 'MTech CSE', representation: 'MTech MCS' },
+    { degree: 'MTech', programme: 'MTech AIML', representation: 'MTech MAI' },
+    { degree: 'MTech LTI', programme: 'MTech AIML', representation: 'MTech MML' },
+    { degree: 'MTech LTI', programme: 'MTech AIDS', representation: 'MTech MAS' },
     { degree: 'MCA', programme: '—', representation: 'MCA' },
     { degree: 'BSC', programme: '—', representation: 'BCS' }
   ];
@@ -341,6 +341,7 @@ function UsersTab() {
                 className={`w-full h-12 px-4 text-base ${inputStyles} placeholder:text-gray-400`}
               />
             </div>
+
 
             <div className="md:col-span-5 flex gap-3 justify-start pt-4">
               <button type="submit" className={buttonVariants.primary}>
