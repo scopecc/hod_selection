@@ -68,25 +68,24 @@ const EmptyState = ({ icon: Icon, title, description }: {
 
 function UsersTab() {
   const { data, mutate } = useSWR('/api/admin/users', fetcher);
-  const departmentOptions = [
-    'SAS', 'SBST', 'SCE', 'SCHEME', 'SCOPE', 'SCORE', 'SELECT', 'SENSE', 'SHINE', 'SMEC', 'SSL', 'HOT', 'VAIAL', 'VIT BS', 'V-SIGN', 'V-SMART', 'V-SPARC'
-  ];
+  // Extract unique programme values from programmeOptions and add Other
   const programmeOptions = [
-    { degree: 'BTech', programme: 'CSE', representation: 'BCE' },
-    { degree: 'BTech', programme: 'AIML', representation: 'BAI' },
-    { degree: 'BTech', programme: 'AIR', representation: 'BRS' },
-    { degree: 'BTech', programme: 'Cyber Security', representation: 'BYB' },
-    { degree: 'BTech', programme: 'Data Science', representation: 'BDS' },
-    { degree: 'BTech', programme: 'CPS', representation: 'BPS' },
-    { degree: 'MTech (Int)', programme: 'Business Analytics (2021–2024) / Data Science (2025)', representation: 'MIA / MID' },
-    { degree: 'MTech (Int)', programme: 'SE', representation: 'MIS' },
-    { degree: 'MTech', programme: 'CSE', representation: 'MCS' },
-    { degree: 'MTech', programme: 'AIML', representation: 'MAI' },
-    { degree: 'MTech LTI', programme: 'AIML', representation: 'MML' },
-    { degree: 'MTech LTI', programme: 'AIDS', representation: 'MAS' },
+    { degree: 'BTech', programme: 'CSE', representation: 'BTech BCE' },
+    { degree: 'BTech', programme: 'AIML', representation: 'BTech BAI' },
+    { degree: 'BTech', programme: 'AIR', representation: 'BTech BRS' },
+    { degree: 'BTech', programme: 'Cyber Security', representation: 'BTech BYB' },
+    { degree: 'BTech', programme: 'Data Science', representation: 'BTech BDS' },
+    { degree: 'BTech', programme: 'CPS', representation: 'BTech BPS' },
+    { degree: 'MTech (Int)', programme: 'Business Analytics (2021–2024) / Data Science (2025)', representation: 'MTech MIA / MID' },
+    { degree: 'MTech (Int)', programme: 'SE', representation: 'MTech MIS' },
+    { degree: 'MTech', programme: 'CSE', representation: 'MTech MCS' },
+    { degree: 'MTech', programme: 'AIML', representation: 'MTech MAI' },
+    { degree: 'MTech LTI', programme: 'AIML', representation: 'MTech MML' },
+    { degree: 'MTech LTI', programme: 'AIDS', representation: 'MTech MAS' },
     { degree: 'MCA', programme: '—', representation: 'MCA' },
     { degree: 'BSC', programme: '—', representation: 'BCS' }
   ];
+  const departmentOptions = Array.from(new Set(programmeOptions.map(opt => opt.programme).filter(p => p !== '—'))).concat(['Other']);
   const [form, setForm] = useState({ name: '', employeeId: '', email: '', department: '', programme: '' });
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -99,10 +98,6 @@ function UsersTab() {
   const [departmentDropdownPos, setDepartmentDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const [departmentOpen, setDepartmentOpen] = useState(false);
 
-  const programmeBtnRef = React.useRef<HTMLButtonElement | null>(null);
-  const [programmeDropdownPos, setProgrammeDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
-  const [programmeOpen, setProgrammeOpen] = useState(false);
-
   // Calculate dropdown position on open
   useEffect(() => {
     if (departmentOpen && departmentBtnRef.current) {
@@ -113,18 +108,6 @@ function UsersTab() {
     }
   }, [departmentOpen]);
 
-  useEffect(() => {
-    if (programmeOpen && programmeBtnRef.current) {
-      const rect = programmeBtnRef.current.getBoundingClientRect();
-      setProgrammeDropdownPos({ left: rect.left, top: rect.bottom + window.scrollY, width: rect.width });
-    } else {
-      setProgrammeDropdownPos(null);
-    }
-  }, [programmeOpen]);
-
-  const filteredProgrammeOptions = programmeOptions.filter(opt =>
-    (`${opt.degree} ${opt.programme} ${opt.representation}`.toLowerCase().includes(programmeSearch.toLowerCase()))
-  );
   const filteredDepartmentOptions = departmentOptions.filter(opt =>
     opt.toLowerCase().includes(departmentSearch.toLowerCase())
   );
@@ -207,8 +190,8 @@ function UsersTab() {
           </div>
         </div>
         <div className="p-6">
-          <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <div className="space-y-2">
+          <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-6 gap-6">
+            <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium text-gray-700">Full Name</label>
               <input
                 placeholder="Enter full name"
@@ -219,7 +202,7 @@ function UsersTab() {
                 aria-label="User Name"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-1">
               <label className="text-sm font-medium text-gray-700">Employee ID</label>
               <input
                 placeholder="Employee ID"
@@ -231,7 +214,7 @@ function UsersTab() {
                 aria-label="Employee ID"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium text-gray-700">Email Address</label>
               <input
                 placeholder="user@example.com"
@@ -244,177 +227,122 @@ function UsersTab() {
               />
             </div>
             
-            {/* Enhanced Department Listbox */}
-<div className={`space-y-2 ${dropdownWrapperClass} overflow-visible`}>
-  <label className="text-sm font-medium dark:text-gray-300 text-gray-700">
-    Department
-  </label>
-  <Listbox
-    value={form.department}
-    onChange={val => setForm({ ...form, department: val })}
-  >
-    {({ open }) => {
-      useEffect(() => { setDepartmentOpen(open); }, [open]);
-      return (
-        <div className="relative w-full overflow-visible">
-          <Listbox.Button
-            ref={departmentBtnRef}
-            className={`w-full h-12 flex items-center justify-between px-4 text-base dark:text-gray-200 text-gray-700 ${inputStyles}`}
-          >
-            <span className="truncate">
-              {form.department || 'Select Department'}
-            </span>
-            <svg
-              className="w-4 h-4 ml-2 dark:text-gray-400 text-gray-400 transition-transform ui-open:rotate-180"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
+            {/* Enhanced Department Selection */}
+<div className="space-y-2 flex flex-col md:flex-row md:items-start md:space-x-4 md:space-y-0 md:col-span-3">
+  <div className={`${dropdownWrapperClass} overflow-visible flex-1`}>
+    <label className="text-sm font-medium dark:text-gray-300 text-gray-700">
+      Department
+    </label>
+    <Listbox
+      value={form.department}
+      onChange={val => setForm({ ...form, department: val })}
+    >
+      {({ open }) => {
+        useEffect(() => { setDepartmentOpen(open); }, [open]);
+        return (
+          <div className="relative w-full overflow-visible">
+            <Listbox.Button
+              ref={departmentBtnRef}
+              className={`w-full h-12 flex items-center justify-between px-4 text-base dark:text-gray-200 text-gray-700 ${inputStyles}`}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </Listbox.Button>
-          {open && departmentDropdownPos && ReactDOM.createPortal(
-            <Listbox.Options className={`${dropdownOptionsClass} absolute z-[99999]`} style={{ left: departmentDropdownPos.left, top: departmentDropdownPos.top, width: departmentDropdownPos.width, position: 'absolute' }}>
-              <div className="sticky top-0 p-3 border-b border-gray-100/50 dark:border-gray-700 bg-white dark:bg-gray-900">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 dark:text-gray-500 text-gray-400" />
-                  <input
-                    type="text"
-                    className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 rounded-lg border-0 focus:bg-white dark:focus:bg-gray-700 transition-colors"
-                    placeholder="Search departments..."
-                    value={departmentSearch}
-                    onChange={e => setDepartmentSearch(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div>
-                {filteredDepartmentOptions.length ? (
-                  filteredDepartmentOptions.map((opt, idx) => (
-                    <Listbox.Option
-                      key={idx}
-                      value={opt}
-                      className={({ active, selected }) =>
-                        `cursor-pointer px-4 py-3 text-base transition-colors ${
-                          active
-                            ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                            : 'text-gray-800 dark:text-gray-200'
-                        } ${
-                          selected
-                            ? 'font-semibold bg-blue-100 dark:bg-blue-800'
-                            : 'font-normal'
-                        }`
-                      }
-                    >
-                      {opt}
-                    </Listbox.Option>
-                  ))
-                ) : (
-                  <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    No departments found
+              <span className="truncate">
+                {form.department === 'Other' ? 'Other' : (form.department || 'Select Department')}
+              </span>
+              <svg
+                className="w-4 h-4 ml-2 dark:text-gray-400 text-gray-400 transition-transform ui-open:rotate-180"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </Listbox.Button>
+            {open && departmentDropdownPos && ReactDOM.createPortal(
+              <Listbox.Options className={`${dropdownOptionsClass} absolute z-[99999]`} style={{ left: departmentDropdownPos.left, top: departmentDropdownPos.top, width: departmentDropdownPos.width, position: 'absolute' }}>
+                <div className="sticky top-0 p-3 border-b border-gray-100/50 dark:border-gray-700 bg-white dark:bg-gray-900">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 dark:text-gray-500 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 rounded-lg border-0 focus:bg-white dark:focus:bg-gray-700 transition-colors"
+                      placeholder="Search departments..."
+                      value={departmentSearch}
+                      onChange={e => setDepartmentSearch(e.target.value)}
+                      autoFocus
+                    />
                   </div>
-                )}
-              </div>
-            </Listbox.Options>,
-            document.body
-          )}
-        </div>
-      );
-    }}
-  </Listbox>
-</div>
+                </div>
+                <div>
+                  {filteredDepartmentOptions.length ? (
+                    <>
+                      {filteredDepartmentOptions.map((opt, idx) => (
+                        <Listbox.Option
+                          key={idx}
+                          value={opt}
+                          className={({ active, selected }) =>
+                            `cursor-pointer px-4 py-3 text-base transition-colors ${
+                              active
+                                ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                                : 'text-gray-800 dark:text-gray-200'
+                            } ${
+                              selected
+                                ? 'font-semibold bg-blue-100 dark:bg-blue-800'
+                                : 'font-normal'
+                            }`
+                          }
+                        >
+                          <div className="truncate max-w-full">{opt}</div>
+                        </Listbox.Option>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                      No departments found
+                    </div>
+                  )}
+                </div>
+              </Listbox.Options>,
+              document.body
+            )}
+          </div>
+        );
+      }}
+    </Listbox>
+  </div>
 
-<div className={`space-y-2 ${dropdownWrapperClass} overflow-visible`}>
-  <label className="text-sm font-medium dark:text-gray-300 text-gray-700">
-    Programme
-  </label>
-  <Listbox
-    value={form.programme}
-    onChange={val => setForm({ ...form, programme: val })}
-  >
-    {({ open }) => {
-      useEffect(() => { setProgrammeOpen(open); }, [open]);
-      return (
-        <div className="relative w-full overflow-visible">
-          <Listbox.Button
-            ref={programmeBtnRef}
-            className={`w-full h-12 flex items-center justify-between px-4 text-base dark:text-gray-200 text-gray-700 ${inputStyles}`}
-          >
-            <span className="truncate">
-              {form.programme || 'Select Programme'}
-            </span>
-            <svg
-              className="w-4 h-4 ml-2 dark:text-gray-400 text-gray-400 transition-transform ui-open:rotate-180"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </Listbox.Button>
-          {open && programmeDropdownPos && ReactDOM.createPortal(
-            <Listbox.Options className={`${dropdownOptionsClass} absolute z-[99999]`} style={{ left: programmeDropdownPos.left, top: programmeDropdownPos.top, width: programmeDropdownPos.width, position: 'absolute' }}>
-              <div className="sticky top-0 p-3 border-b border-gray-100/50 dark:border-gray-700 bg-white dark:bg-gray-900">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 dark:text-gray-500 text-gray-400" />
-                  <input
-                    type="text"
-                    className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 rounded-lg border-0 focus:bg-white dark:focus:bg-gray-700 transition-colors"
-                    placeholder="Search programmes..."
-                    value={programmeSearch}
-                    onChange={e => setProgrammeSearch(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div>
-                {filteredProgrammeOptions.length ? (
-                  filteredProgrammeOptions.map((opt, idx) => (
-                    <Listbox.Option
-                      key={idx}
-                      value={`${opt.degree} ${opt.programme} (${opt.representation})`}
-                      className={({ active, selected }) =>
-                        `cursor-pointer px-4 py-3 text-base transition-colors ${
-                          active
-                            ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                            : 'text-gray-800 dark:text-gray-200'
-                        } ${
-                          selected
-                            ? 'font-semibold bg-blue-100 dark:bg-blue-800'
-                            : 'font-normal'
-                        }`
-                      }
-                    >
-                      <div>
-                        <div className="font-medium">
-                          {opt.degree} {opt.programme}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {opt.representation}
-                        </div>
-                      </div>
-                    </Listbox.Option>
-                  ))
-                ) : (
-                  <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    No programmes found
-                  </div>
-                )}
-              </div>
-            </Listbox.Options>,
-            document.body
-          )}
-        </div>
-      );
-    }}
-  </Listbox>
+  {/* Custom Department Input */}
+  {form.department === 'Other' && (
+    <div className="flex-1">
+      <label className="text-sm font-medium dark:text-gray-300 text-gray-700">
+        Custom Department
+      </label>
+      <input
+        type="text"
+        placeholder="Enter custom department..."
+        value={form.department === 'Other' ? '' : form.department}
+        onChange={e => setForm({ ...form, department: e.target.value })}
+        className={`w-full h-12 px-4 text-base ${inputStyles} placeholder:text-gray-400`}
+        autoFocus
+      />
+    </div>
+  )}
 </div>
 
 
 
-            <div className="md:col-span-5 flex gap-3 justify-start pt-4">
+            <div className="md:col-span-3 space-y-2">
+              <label className="text-sm font-medium dark:text-gray-300 text-gray-700">Programme</label>
+              <input
+                type="text"
+                placeholder="Enter programme..."
+                value={form.programme}
+                onChange={e => setForm({ ...form, programme: e.target.value })}
+                className={`w-full h-12 px-4 text-base ${inputStyles} placeholder:text-gray-400`}
+              />
+            </div>
+
+            <div className="md:col-span-6 flex gap-3 justify-start pt-4">
               <button type="submit" className={buttonVariants.primary}>
                 <div className="flex items-center space-x-2">
                   {isEditing ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
