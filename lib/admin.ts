@@ -39,18 +39,27 @@ export function requireAdminFromRequest(req: Request): boolean {
 
 export function setAdminSessionCookie(): void {
 	const token = createAdminSessionToken();
-	cookies().set('admin_session', token, {
+	// In production we need the cookie scoped to the main domain with Secure and
+	// SameSite=None for cross-site usage (if any). For local development we
+	// omit the domain and relax sameSite/secure so the cookie works on
+	// localhost without HTTPS.
+	const opts: any = {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === 'production',
 		path: '/',
 		maxAge: 60 * 60 * 8,
-		sameSite: 'none',
-		domain: ".scopevitcc.in"
-	});
+		sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+	};
+	if (process.env.NODE_ENV === 'production') {
+		opts.domain = '.scopevitcc.in';
+	}
+	cookies().set('admin_session', token, opts);
 }
 
 export function clearAdminSessionCookie(): void {
-	cookies().set('admin_session', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 0, sameSite: 'none', domain: ".scopevitcc.in" });
+	const opts: any = { httpOnly: true, secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 0, sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' };
+	if (process.env.NODE_ENV === 'production') opts.domain = '.scopevitcc.in';
+	cookies().set('admin_session', '', opts);
 }
 
 export function isAdminFromCookies(): boolean {

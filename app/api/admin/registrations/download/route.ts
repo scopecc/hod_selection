@@ -57,48 +57,26 @@ export async function POST(req: Request) {
 				const studentStrengthPerSlot = typeof entry.studentsPerSlot !== 'undefined' && entry.studentsPerSlot !== null
 					? entry.studentsPerSlot
 					: (entry.totalSlots ? Math.round(Number(entry.studentStrength) / Number(entry.totalSlots)) : '');
-				const row: any = isGlobal ? {
-					'S.No.': excelData.length + 1,
-					'Username': reg.userName || '',
-					'User ID': reg.userId || '',
-					'Year of admission (Batch)': entry.batch,
-					'Course Category': entry.group || '',
+				// Unified row structure (no Username/User ID). Follow requested order and rename headers.
+				const row: any = {
+					'SNO.': excelData.length + 1,
+					'Stream': reg.programme || '',
+					'Course Type': entry.group || '',
 					'Course Code': entry.courseCode,
 					'Course Title': entry.courseName,
 					'L': L,
 					'T': T,
 					'P': P,
 					'J': J,
-					'C (credits)': entry.credits,
-					'Pre-requisites': Array.isArray(entry.prerequisites) && entry.prerequisites.length > 0 ? entry.prerequisites.join(', ') : '',
+					'C': entry.credits,
 					'Course Handling School': entry.facultySchool,
-					'No. of FN Slot': entry.fnSlots,
-					'No. of AN Slot': entry.anSlots,
-					'Total Number of Slots': entry.totalSlots,
-					'Student Strength per Slot': studentStrengthPerSlot,
-					'Total Strength': entry.studentStrength,
-					'Basket': entry.basket || '',
-					'Remarks': entry.remarks || '',
-					'Status': reg.status,
-					'Submitted Date': reg.updatedAt ? new Date(reg.updatedAt).toLocaleString() : ''
-				} : {
-					'S.No.': excelData.length + 1,
-					'Year of admission (Batch)': entry.batch,
-					'Course Category': entry.group || '',
-					'Course Code': entry.courseCode,
-					'Course Title': entry.courseName,
-					'L': L,
-					'T': T,
-					'P': P,
-					'J': J,
-					'C (credits)': entry.credits,
+					'No of FN slots': entry.fnSlots,
+					'No of AN Slots': entry.anSlots,
+					'Total Slots': entry.totalSlots,
+					'Student per slot strength': studentStrengthPerSlot,
+					'Student Str': entry.studentStrength,
+					// keep remaining fields as before
 					'Pre-requisites': Array.isArray(entry.prerequisites) && entry.prerequisites.length > 0 ? entry.prerequisites.join(', ') : '',
-					'Course Handling School': entry.facultySchool,
-					'No. of FN Slot': entry.fnSlots,
-					'No. of AN Slot': entry.anSlots,
-					'Total Number of Slots': entry.totalSlots,
-					'Student Strength per Slot': studentStrengthPerSlot,
-					'Total Strength': entry.studentStrength,
 					'Basket': entry.basket || '',
 					'Remarks': entry.remarks || '',
 					'Status': reg.status,
@@ -114,10 +92,10 @@ export async function POST(req: Request) {
 			const db = await getDatabase();
 			const draft = await db.collection('drafts').findOne({ _id: draftId });
 			const reg0 = registrations[0];
-			if (reg0 && draft) {
-				// Clean for filename
+			if (draft) {
+				// Clean for filename (omit user info)
 				const safe = (s: string) => String(s || '').replace(/[^a-zA-Z0-9-_]/g, '_');
-				fileName = `${safe(reg0.userName)}_${safe(reg0.userId)}_${safe(draft.name)}.xlsx`;
+				fileName = `${safe(draft.name)}.xlsx`;
 			}
 		} catch {}
 
