@@ -311,8 +311,8 @@ function UsersTab() {
     </Listbox>
   </div>
 
-  {/* Custom Department Input */}
-  {form.department === 'Other' && (
+  {/* Custom Department Input: show when 'Other' is selected OR when current value isn't in the options (editing a saved custom value) */}
+  {(form.department === 'Other' || (form.department && !departmentOptions.includes(form.department))) && (
     <div className="flex-1">
       <label className="text-sm font-medium dark:text-gray-300 text-gray-700">
         Custom Department
@@ -331,7 +331,7 @@ function UsersTab() {
 
 
 
-            <div className="md:col-span-3 space-y-2">
+            <div className="md:col-span-5 space-y-2">
               <label className="text-sm font-medium dark:text-gray-300 text-gray-700">Programme</label>
               <input
                 type="text"
@@ -342,7 +342,7 @@ function UsersTab() {
               />
             </div>
 
-            <div className="md:col-span-6 flex gap-3 justify-start pt-4">
+            <div className="md:col-span-5 flex gap-3 justify-start pt-4">
               <button type="submit" className={buttonVariants.primary}>
                 <div className="flex items-center space-x-2">
                   {isEditing ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
