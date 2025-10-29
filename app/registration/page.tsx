@@ -416,7 +416,7 @@ export default function RegistrationPage() {
 			const response = await fetch('/api/registrations', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ draftId: selectedDraft, entries, status: 'submitted' })
+				body: JSON.stringify({ draftId: selectedDraft, entries, status: 'submitted', merge: true })
 			});
 			if (response.ok) {
 				setMessage('Registration submitted successfully!');

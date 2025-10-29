@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 	const session = await getServerSession(authOptions);
 	if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	const body = await req.json();
-	const { draftId, entries, status } = body || {};
+	const { draftId, entries, status, merge } = body || {};
 	if (!draftId || !Array.isArray(entries)) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 	const db = await getDatabase();
 	const userId = session.user.id as string;
@@ -59,33 +59,31 @@ export async function POST(req: Request) {
 
 	// Fetch existing registration
 	const existingReg = await db.collection('registrations').findOne({ draftId, userId });
-	let mergedEntries = existingReg?.entries ? [...existingReg.entries] : [];
+	let finalEntries;
 
-	// Helper to compare two entries deeply
-	function entriesEqual(a: any, b: any) {
-		return a.courseCode === b.courseCode &&
-			a.courseName === b.courseName &&
-			a.credits === b.credits &&
-			a.group === b.group &&
-			a.studentStrength === b.studentStrength &&
-			a.fnSlots === b.fnSlots &&
-			a.anSlots === b.anSlots &&
-			a.totalSlots === b.totalSlots &&
-			a.facultySchool === b.facultySchool &&
-			a.batch === b.batch &&
-			JSON.stringify(a.prerequisites) === JSON.stringify(b.prerequisites) &&
-			a.L === b.L &&
-			a.T === b.T &&
-			a.P === b.P &&
-			a.J === b.J;
+	if (merge) {
+		const existingEntries = existingReg?.entries || [];
+		const entriesMap = new Map();
+
+		existingEntries.forEach((entry: any) => {
+			const key = `${entry.courseCode}-${entry.batch}`;
+			entriesMap.set(key, entry);
+		});
+
+		normalizedEntries.forEach((entry: any) => {
+			const key = `${entry.courseCode}-${entry.batch}`;
+			entriesMap.set(key, entry); // Add or update
+		});
+
+		finalEntries = Array.from(entriesMap.values());
+	} else {
+		finalEntries = normalizedEntries;
 	}
 
-	// Overwrite entries with the new array from the frontend (no merging)
-	mergedEntries = normalizedEntries;
 
 	await db.collection('registrations').updateOne(
 		{ draftId, userId },
-		{ $set: { draftId, userId, userName, department, programme, entries: mergedEntries, status: status || 'draft', updatedAt: now, createdAt: existingReg?.createdAt || now } },
+		{ $set: { draftId, userId, userName, department, programme, entries: finalEntries, status: status || 'draft', updatedAt: now, createdAt: existingReg?.createdAt || now } },
 		{ upsert: true }
 	);
 	return NextResponse.json({ success: true });
